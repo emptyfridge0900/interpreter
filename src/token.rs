@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 pub type TokenType =String;
 
+#[derive(Debug)]
 pub struct Token{
     pub token_type: TokenType,
     pub literal:String
