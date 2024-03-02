@@ -33,6 +33,10 @@ pub const SLASH:&str="/";
 pub const LT:&str="<";
 pub const GT:&str=">";
 
+//Comparison operators
+pub const EQ:&str ="==";
+pub const NOT_EQ:&str="!=";
+
 // Delimiters
 pub const COMMA: &str = ",";
 pub const SEMICOLON: &str = ";";

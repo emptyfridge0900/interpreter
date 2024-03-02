@@ -21,6 +21,14 @@ impl<'a> Lexer<'a>{
         l.read_char();
         l
     }
+
+    pub fn peek_char(&mut self)->u8{
+        if self.read_position>=self.input.len(){
+            0
+        }else{
+            self.input[self.read_position]
+        }
+    }
     pub fn read_char(&mut self){
         if self.read_position>=self.input.len(){
             self.ch=0;
@@ -43,10 +51,28 @@ impl<'a> Lexer<'a>{
         let mut tok : token::Token;
         self.skip_whitespace();
         match self.ch{
-            b'='=> tok = Token::new(token::ASSIGN.to_owned(),"=".to_owned()),
+            b'='=> tok = {
+                if self.peek_char() == b'='{
+                    let ch=self.ch;
+                    self.read_char();
+                    let lit=from_utf8(&[ch,self.ch]).unwrap().to_string();
+                    Token::new(token::EQ.to_owned(),lit.clone())
+                }else{
+                    Token::new(token::ASSIGN.to_owned(),"=".to_owned())
+                }
+            },
             b'+'=> tok = Token::new(token::PLUS.to_owned(),"+".to_owned()),
             b'-'=> tok = Token::new(token::MINUS.to_owned(),"-".to_owned()),
-            b'!'=> tok = Token::new(token::BANG.to_owned(),"!".to_owned()),
+            b'!'=> tok = {
+                if self.peek_char() == b'='{
+                    let ch=self.ch;
+                    self.read_char();
+                    let lit=from_utf8(&[ch,self.ch]).unwrap().to_string();
+                    Token::new(token::NOT_EQ.to_owned(),lit.clone())
+                }else{
+                    Token::new(token::BANG.to_owned(),"!".to_owned())
+                }
+            },
             b'*'=> tok = Token::new(token::ASTERISK.to_owned(),"*".to_owned()),
             b'/'=> tok = Token::new(token::SLASH.to_owned(),"/".to_owned()),
             b'<'=> tok = Token::new(token::LT.to_owned(),"<".to_owned()),

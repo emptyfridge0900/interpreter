@@ -33,9 +33,12 @@ if (5 < 10) {
 } else {
     return false;
 }
+
+10 == 10;
+10 != 9;
 ";
 
-        let tests:[Expected;66]=[
+        let tests:[Expected;74]=[
             Expected::new(token::LET.to_owned(),"let"),
             Expected::new(token::IDENT.to_owned(),"five"),
             Expected::new(token::ASSIGN.to_owned(),"="),
@@ -102,6 +105,15 @@ if (5 < 10) {
             Expected::new(token::FALSE.to_owned(),"false"),
             Expected::new(token::SEMICOLON.to_owned(),";"),
             Expected::new(token::RBRACE.to_owned(),"}"),
+
+            Expected::new(token::INT.to_owned(),"10"),
+            Expected::new(token::EQ.to_owned(),"=="),
+            Expected::new(token::INT.to_owned(),"10"),
+            Expected::new(token::SEMICOLON.to_owned(),";"),
+            Expected::new(token::INT.to_owned(),"10"),
+            Expected::new(token::NOT_EQ.to_owned(),"!="),
+            Expected::new(token::INT.to_owned(),"9"),
+            Expected::new(token::SEMICOLON.to_owned(),";"),
 
             Expected::new(token::EOF.to_owned(),""),
         ];
