@@ -22,13 +22,20 @@ mod tests {
         let input = "let five = 5;
 let ten = 10;
 let add = fn(x, y) {
-x + y;
+    x + y;
 };
 let result = add(five, ten);
 !-/*5;
-5 < 10 > 5;";
+5 < 10 > 5;
 
-        let tests:[Expected;49]=[
+if (5 < 10) {
+    return true;
+} else {
+    return false;
+}
+";
+
+        let tests:[Expected;66]=[
             Expected::new(token::LET.to_owned(),"let"),
             Expected::new(token::IDENT.to_owned(),"five"),
             Expected::new(token::ASSIGN.to_owned(),"="),
@@ -77,6 +84,25 @@ let result = add(five, ten);
             Expected::new(token::GT.to_owned(),">"),
             Expected::new(token::INT.to_owned(),"5"),
             Expected::new(token::SEMICOLON.to_owned(),";"),
+
+            Expected::new(token::IF.to_owned(),"if"),
+            Expected::new(token::LPAREN.to_owned(),"("),
+            Expected::new(token::INT.to_owned(),"5"),
+            Expected::new(token::LT.to_owned(),"<"),
+            Expected::new(token::INT.to_owned(),"10"),
+            Expected::new(token::RPAREN.to_owned(),")"),
+            Expected::new(token::LBRACE.to_owned(),"{"),
+            Expected::new(token::RETURN.to_owned(),"return"),
+            Expected::new(token::TRUE.to_owned(),"true"),
+            Expected::new(token::SEMICOLON.to_owned(),";"),
+            Expected::new(token::RBRACE.to_owned(),"}"),
+            Expected::new(token::ELSE.to_owned(),"else"),
+            Expected::new(token::LBRACE.to_owned(),"{"),
+            Expected::new(token::RETURN.to_owned(),"return"),
+            Expected::new(token::FALSE.to_owned(),"false"),
+            Expected::new(token::SEMICOLON.to_owned(),";"),
+            Expected::new(token::RBRACE.to_owned(),"}"),
+
             Expected::new(token::EOF.to_owned(),""),
         ];
         let mut l=Lexer::new(input);

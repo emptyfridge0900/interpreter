@@ -99,6 +99,11 @@ impl<'a> Lexer<'a>{
         let map: HashMap<String, TokenType> =HashMap::from([
             ("fn".to_owned(), "FUNCTION".to_owned()),
             ("let".to_owned(), "LET".to_owned()),
+            ("true".to_owned(), "TRUE".to_owned()),
+            ("false".to_owned(), "FALSE".to_owned()),
+            ("if".to_owned(), "IF".to_owned()),
+            ("else".to_owned(), "ELSE".to_owned()),
+            ("return".to_owned(), "RETURN".to_owned()),
         ]);
         map.get(ident).unwrap_or(&"IDENT".to_string()).to_owned()
     }
