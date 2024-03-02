@@ -24,9 +24,11 @@ let ten = 10;
 let add = fn(x, y) {
 x + y;
 };
-let result = add(five, ten);";
+let result = add(five, ten);
+!-/*5;
+5 < 10 > 5;";
 
-        let tests:[Expected;37]=[
+        let tests:[Expected;49]=[
             Expected::new(token::LET.to_owned(),"let"),
             Expected::new(token::IDENT.to_owned(),"five"),
             Expected::new(token::ASSIGN.to_owned(),"="),
@@ -62,6 +64,18 @@ let result = add(five, ten);";
             Expected::new(token::COMMA.to_owned(),","),
             Expected::new(token::IDENT.to_owned(),"ten"),
             Expected::new(token::RPAREN.to_owned(),")"),
+            Expected::new(token::SEMICOLON.to_owned(),";"),
+            Expected::new(token::BANG.to_owned(),"!"),
+            Expected::new(token::MINUS.to_owned(),"-"),
+            Expected::new(token::SLASH.to_owned(),"/"),
+            Expected::new(token::ASTERISK.to_owned(),"*"),
+            Expected::new(token::INT.to_owned(),"5"),
+            Expected::new(token::SEMICOLON.to_owned(),";"),
+            Expected::new(token::INT.to_owned(),"5"),
+            Expected::new(token::LT.to_owned(),"<"),
+            Expected::new(token::INT.to_owned(),"10"),
+            Expected::new(token::GT.to_owned(),">"),
+            Expected::new(token::INT.to_owned(),"5"),
             Expected::new(token::SEMICOLON.to_owned(),";"),
             Expected::new(token::EOF.to_owned(),""),
         ];
