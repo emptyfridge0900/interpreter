@@ -5,6 +5,9 @@ use token::{Token,TokenType};
 
 #[cfg(test)]
 mod tests {
+    use core::panic;
+    use std::str::from_utf8;
+
     use crate::{lexer::Lexer, token, Expected};
 
     #[test]
@@ -15,40 +18,73 @@ mod tests {
 
     #[test]
     fn test_next_token(){
-        let input = "=+(){},;";
+        
+        let input = "let five = 5;
+let ten = 10;
+let add = fn(x, y) {
+x + y;
+};
+let result = add(five, ten);";
 
-        let tests:[Expected;9]=[
-            Expected::new(token::ASSIGN,"="),
-            Expected::new(token::PLUS,"+"),
-            Expected::new(token::LPAREN,"("),
-            Expected::new(token::RPAREN,")"),
-            Expected::new(token::LBRACE,"{"),
-            Expected::new(token::RBRACE,"}"),
-            Expected::new(token::COMMA,","),
-            Expected::new(token::SEMICOLON,";"),
-            Expected::new(token::EOF,""),
+        let tests:[Expected;37]=[
+            Expected::new(token::LET.to_owned(),"let"),
+            Expected::new(token::IDENT.to_owned(),"five"),
+            Expected::new(token::ASSIGN.to_owned(),"="),
+            Expected::new(token::INT.to_owned(),"5"),
+            Expected::new(token::SEMICOLON.to_owned(),";"),
+            Expected::new(token::LET.to_owned(),"let"),
+            Expected::new(token::IDENT.to_owned(),"ten"),
+            Expected::new(token::ASSIGN.to_owned(),"="),
+            Expected::new(token::INT.to_owned(),"10"),
+            Expected::new(token::SEMICOLON.to_owned(),";"),
+            Expected::new(token::LET.to_owned(),"let"),
+            Expected::new(token::IDENT.to_owned(),"add"),
+            Expected::new(token::ASSIGN.to_owned(),"="),
+            Expected::new(token::FUNCTION.to_owned(),"fn"),
+            Expected::new(token::LPAREN.to_owned(),"("),
+            Expected::new(token::IDENT.to_owned(),"x"),
+            Expected::new(token::COMMA.to_owned(),","),
+            Expected::new(token::IDENT.to_owned(),"y"),
+            Expected::new(token::RPAREN.to_owned(),")"),
+            Expected::new(token::LBRACE.to_owned(),"{"),
+            Expected::new(token::IDENT.to_owned(),"x"),
+            Expected::new(token::PLUS.to_owned(),"+"),
+            Expected::new(token::IDENT.to_owned(),"y"),
+            Expected::new(token::SEMICOLON.to_owned(),";"),
+            Expected::new(token::RBRACE.to_owned(),"}"),
+            Expected::new(token::SEMICOLON.to_owned(),";"),
+            Expected::new(token::LET.to_owned(),"let"),
+            Expected::new(token::IDENT.to_owned(),"result"),
+            Expected::new(token::ASSIGN.to_owned(),"="),
+            Expected::new(token::IDENT.to_owned(),"add"),
+            Expected::new(token::LPAREN.to_owned(),"("),
+            Expected::new(token::IDENT.to_owned(),"five"),
+            Expected::new(token::COMMA.to_owned(),","),
+            Expected::new(token::IDENT.to_owned(),"ten"),
+            Expected::new(token::RPAREN.to_owned(),")"),
+            Expected::new(token::SEMICOLON.to_owned(),";"),
+            Expected::new(token::EOF.to_owned(),""),
         ];
         let mut l=Lexer::new(input);
-
         for (i,tt) in tests.into_iter().enumerate(){
             let tok=l.next_token();
             if tok.token_type != tt.expectedType{
-
+                panic!("tests[{}] - tokentype wrong. expected={}, got={}",i, tt.expectedType, tok.token_type);
             }
 
             if tok.literal != tt.expectedLiteral{
-
+                panic!("tests[{}] - literal wrong. expected={}, got={}",i, tt.expectedLiteral, tok.literal);
             }
         }
     }
 }
 
-struct Expected{
+struct Expected<'a>{
     expectedType:TokenType,
-    expectedLiteral:&'static str
+    expectedLiteral:&'a str
 }
-impl Expected{
-    fn new(t:TokenType,l:&'static str)->Self{
+impl<'a> Expected<'a>{
+    fn new(t:TokenType,l:&'a str)->Self{
         Expected{
             expectedType:t,
             expectedLiteral:l

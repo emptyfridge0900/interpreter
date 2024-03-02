@@ -1,14 +1,14 @@
 
+use std::collections::HashMap;
 
-
-pub type TokenType=&'static str;
+pub type TokenType =String;
 
 pub struct Token{
     pub token_type: TokenType,
-    pub literal:&'static str
+    pub literal:String
 }
 impl Token{
-    pub fn new(t:TokenType,l:&'static str)->Token{
+    pub fn new(t:TokenType,l:String)->Token{
         Token{
             token_type:t,
             literal:l
@@ -34,3 +34,4 @@ pub const RBRACE: &str = "}";
 // Keywords
 pub const FUNCTION: &str = "FUNCTION";
 pub const LET: &str = "LET";
+
