@@ -44,11 +44,17 @@ impl<'a> Lexer<'a>{
         self.skip_whitespace();
         match self.ch{
             b'='=> tok = Token::new(token::ASSIGN.to_owned(),"=".to_owned()),
+            b'+'=> tok = Token::new(token::PLUS.to_owned(),"+".to_owned()),
+            b'-'=> tok = Token::new(token::MINUS.to_owned(),"-".to_owned()),
+            b'!'=> tok = Token::new(token::BANG.to_owned(),"!".to_owned()),
+            b'*'=> tok = Token::new(token::ASTERISK.to_owned(),"*".to_owned()),
+            b'/'=> tok = Token::new(token::SLASH.to_owned(),"/".to_owned()),
+            b'<'=> tok = Token::new(token::LT.to_owned(),"<".to_owned()),
+            b'>'=> tok = Token::new(token::GT.to_owned(),">".to_owned()),
             b';'=> tok = Token::new(token::SEMICOLON.to_owned(),";".to_owned()),
+            b','=> tok = Token::new(token::COMMA.to_owned(),",".to_owned()),
             b'('=> tok = Token::new(token::LPAREN.to_owned(),"(".to_owned()),
             b')'=> tok = Token::new(token::RPAREN.to_owned(),")".to_owned()),
-            b','=> tok = Token::new(token::COMMA.to_owned(),",".to_owned()),
-            b'+'=> tok = Token::new(token::PLUS.to_owned(),"+".to_owned()),
             b'{'=> tok = Token::new(token::LBRACE.to_owned(),"{".to_owned()),
             b'}'=> tok = Token::new(token::RBRACE.to_owned(),"}".to_owned()),
             0=> {
