@@ -1,6 +1,6 @@
 use std::{any::Any, cell::RefCell};
 
-use crate::token::Token;
+use crate::token::{self, Token};
 
 
 pub trait Node {
@@ -15,6 +15,9 @@ pub trait Statement:Node{
 pub trait Expression:Node{
     fn expression_node(&self);
 }
+
+
+
 
 pub struct Program{
     pub statements:RefCell<Vec<Box<dyn Statement>>>
@@ -39,6 +42,10 @@ impl Node for Program{
         self
     }
 }
+
+
+
+
 
 
 pub struct LetStatement{
@@ -70,6 +77,10 @@ impl Statement for LetStatement{
 }
 
 
+
+
+
+
 pub struct Identifier{
     pub token:Token,
     pub value:String
@@ -92,6 +103,37 @@ impl Node for Identifier{
     }
 }
 impl Statement for Identifier{
+    fn statement_node(&self) {
+    }
+}
+
+
+
+
+
+
+pub struct ReturnStatement{
+    token: token::Token,
+    return_value: Option<Box<dyn Expression>>
+}
+impl ReturnStatement{
+    pub fn new(token:Token)->ReturnStatement{
+        ReturnStatement{
+            token,
+            return_value:None
+        }
+    }
+}
+impl Node for ReturnStatement{
+    fn token_literal(&self)->String {
+        self.token.literal.clone()
+    }
+
+    fn as_any(&self)->&dyn Any {
+        self
+    }
+}
+impl Statement for ReturnStatement{
     fn statement_node(&self) {
     }
 }

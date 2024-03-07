@@ -133,9 +133,9 @@ if (5 < 10) {
     #[test]
     fn test_let_statements(){
         let input = "
-        let x  5;
-let  = 10;
-let 838383;
+        let x = 5;
+let  y= 10;
+let foobar = 838383;
 ";
         let mut l=Lexer::new(input);
         let mut p= Parser::new(l);
@@ -200,6 +200,40 @@ let 838383;
         for msg in errors{
             println!("{}",msg);
         }
+    }
+    #[test]
+    fn test_return_statements(){
+        let input = "
+        return 5;
+return 10;
+return 993322;
+";
+        let mut l=Lexer::new(input);
+        let mut p= Parser::new(l);
+        
+        let program:Program= p.parse_program();
+        check_parser_errors(&p);
+
+
+        if program.statements.borrow().len()!=3{
+            panic!("program.statements does not contain 3 statements. got={}",program.statements.borrow().len());
+            return;
+        }
+        
+        for stmt in program.statements.borrow().iter(){
+            let return_statement =stmt.as_any().downcast_ref::<ast::ReturnStatement>();
+            if return_statement.is_none(){
+                println!("statement not ReturnStatement");
+                continue;
+            }
+            let return_stmt  = return_statement.unwrap();
+            if return_stmt.token_literal() != "return"{
+                println!("return_stmt.token_literal not 'return', got ={}",return_stmt.token_literal());
+            }
+        }
+
+
+
     }
 
 

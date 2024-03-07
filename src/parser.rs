@@ -1,4 +1,4 @@
-use crate::{ast::{self, LetStatement, Program, Statement}, lexer::Lexer, token::{self, Token}};
+use crate::{ast::{self, LetStatement, Program, ReturnStatement, Statement}, lexer::Lexer, token::{self, Token}};
 
 pub struct Parser{
     l:Lexer,
@@ -36,6 +36,13 @@ impl Parser{
                 }
                 Some(Box::new(stmt.unwrap()))
             },
+            token::RETURN=>{
+                let stmt = self.parse_return_statement();
+                if stmt.is_none(){
+                    return None;
+                }
+                Some(Box::new(stmt.unwrap()))
+            },
             _=>None
         }
     }
@@ -56,10 +63,22 @@ impl Parser{
         }
 
         //todo
-        while self.cur_toekn_is(token::SEMICOLON.to_owned()){
+        while !self.cur_toekn_is(token::SEMICOLON.to_owned()){
             self.next_token();
         }
         
+        Some(stmt)
+    }
+    pub fn parse_return_statement(&mut self)->Option<ReturnStatement>{
+        let save_token= self.cur_token.clone();
+        let stmt = ReturnStatement::new(save_token);
+        self.next_token();
+
+        //todo
+        while !self.cur_toekn_is(token::SEMICOLON.to_owned()){
+            self.next_token();
+        }
+
         Some(stmt)
     }
     pub fn parse_identifier(){
