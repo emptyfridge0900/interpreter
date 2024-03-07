@@ -3,17 +3,17 @@ use std::{collections::HashMap, str::from_utf8};
 use crate::token::{self, Token, TokenType};
 
 
-pub struct Lexer<'a>{
-    pub input:&'a [u8],
+pub struct Lexer{
+    pub input:Vec<u8>,
     position:usize,
     read_position:usize,
     ch:u8
 }
 
-impl<'a> Lexer<'a>{
-    pub fn new(input:&'a str)->Lexer<'a>{
+impl Lexer{
+    pub fn new(input:&str)->Lexer{
         let mut l =Lexer{
-            input:input.as_bytes(),
+            input:input.as_bytes().to_owned(),
             position: 0,
             read_position: 0,
             ch: 0,

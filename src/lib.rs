@@ -1,4 +1,5 @@
-
+pub mod ast;
+pub mod parser;
 pub mod token;
 pub mod lexer;
 pub mod repl;
@@ -7,15 +8,10 @@ use token::{Token,TokenType};
 #[cfg(test)]
 mod tests {
     use core::panic;
-    use std::str::from_utf8;
+    use std::{any::Any, str::from_utf8};
 
-    use crate::{lexer::Lexer, token, Expected};
+    use crate::{ast::{self, LetStatement, Node, Program, Statement}, lexer::Lexer, parser::Parser, token, Expected};
 
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
 
     #[test]
     fn test_next_token(){
@@ -130,6 +126,65 @@ if (5 < 10) {
             }
         }
     }
+
+    #[test]
+    fn test_let_statements(){
+        let input = "
+        let x = 5;
+let y = 10;
+let foobar = 838383;
+";
+        let mut l=Lexer::new(input);
+        let mut p= Parser::new(l);
+
+        let program:Program= p.parse_program();
+
+        //if program == nil
+        if program.statements.borrow().len()==0{
+            panic!("part_program() return 0 statements");
+            return;
+        }
+
+        if program.statements.borrow().len()!=3{
+            panic!("program.statements does not contain 3 statements. got={}",program.statements.borrow().len());
+            return;
+        }
+        let tests:Vec<String> =vec![
+            "x".to_owned(),
+            "y".to_owned(),
+            "foobar".to_owned(),
+        ];
+        for (i,tt) in tests.into_iter().enumerate(){
+            let stmt=program.statements.borrow();
+            if !test_let_statement(stmt[i].as_ref().as_any(),tt){
+                return;
+            }
+        }
+
+    }
+
+    fn test_let_statement(s:&dyn Any,name:String)->bool{
+
+
+        let statement =s.downcast_ref::<ast::LetStatement>();
+        if statement.is_none(){
+            return false;
+        }
+        let let_stmt : &ast::LetStatement = statement.unwrap();
+        if let_stmt.token_literal() != "let"{
+            panic!("TokenLiteral not 'let'. got={}",let_stmt.token_literal());
+            return false;
+        }
+        if let_stmt.name.value != name{
+            panic!("let statement.name.value not {} got={:?}",name, let_stmt.name.value);
+            return false;
+        }
+        if let_stmt.name.token_literal() != name{
+            panic!("let statement.name.token_literal not {} got={}",name, let_stmt.name.token_literal());
+            return false;
+        }
+        true
+    }
 }
 
 struct Expected<'a>{
@@ -143,4 +198,8 @@ impl<'a> Expected<'a>{
             expectedLiteral:l
         }
     }
+}
+
+struct ExpectedIdentifier{
+
 }
