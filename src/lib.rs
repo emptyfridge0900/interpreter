@@ -127,17 +127,21 @@ if (5 < 10) {
         }
     }
 
+
+
+
     #[test]
     fn test_let_statements(){
         let input = "
-        let x = 5;
-let y = 10;
-let foobar = 838383;
+        let x  5;
+let  = 10;
+let 838383;
 ";
         let mut l=Lexer::new(input);
         let mut p= Parser::new(l);
-
+        
         let program:Program= p.parse_program();
+        check_parser_errors(&p);
 
         //if program == nil
         if program.statements.borrow().len()==0{
@@ -185,6 +189,20 @@ let foobar = 838383;
         }
         true
     }
+
+    fn check_parser_errors(p:&Parser){
+        let errors= p.errors();
+        if errors.len()==0{
+            return
+        }
+
+        println!("parser has {} errors", errors.len());
+        for msg in errors{
+            println!("{}",msg);
+        }
+    }
+
+
 }
 
 struct Expected<'a>{

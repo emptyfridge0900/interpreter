@@ -3,13 +3,14 @@ use crate::{ast::{self, LetStatement, Program, Statement}, lexer::Lexer, token::
 pub struct Parser{
     l:Lexer,
     cur_token:Token,
-    peek_token:Token
+    peek_token:Token,
+    errors:Vec<String>
 }
 impl Parser{
     pub fn new(mut l:Lexer)->Parser{
         let current=l.next_token();
         let peek=l.next_token();
-        Parser { l, cur_token: current, peek_token:peek }
+        Parser { l, cur_token: current, peek_token:peek,errors:vec![] }
     }
     pub fn next_token(&mut self){
         self.cur_token=self.peek_token.clone();
@@ -80,12 +81,22 @@ impl Parser{
     ///if the parameter match the peek_token, call next_token methos internally,
     ///which changes the current_token value then set the next peek_token
     pub fn expect_peek(&mut self, t: token::TokenType)->bool{
-        if self.peek_token_is(t){
+        if self.peek_token_is(t.clone()){
             self.next_token();
             true
         }else{
+            self.peek_error(t.clone());
             false
         }
+    }
+
+    pub fn errors(&self)->Vec<String>{
+        self.errors.clone()
+    }
+
+    pub fn peek_error(&mut self, t:token::TokenType){
+        let msg = format!("expected next token to be {}, got {} instead", t, self.peek_token.token_type);
+        self.errors.push(msg);
     }
 
 }
