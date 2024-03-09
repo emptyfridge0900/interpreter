@@ -1,6 +1,6 @@
 use std::io::{stdin, stdout, Write};
 
-use crate::{lexer::{self, Lexer}, token};
+use crate::{lexer::{self, Lexer}, token::{self, Token}};
 
 pub fn start(){
     let mut s=String::new();
@@ -10,7 +10,7 @@ pub fn start(){
         stdin().read_line(&mut s).expect("Did not enter a correct string");
         let mut l= Lexer::new(&s);
         let mut tok=l.next_token();
-        while tok.token_type!=token::EOF{
+        while tok!=Token::EOF{
             println!("{:?}",tok);
             tok = l.next_token();
         }

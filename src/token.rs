@@ -1,59 +1,75 @@
-
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 use crate::ast::{Expression, Node, Statement};
 
-pub type TokenType =String;
+pub type TokenType = String;
 
-#[derive(Debug,Clone)]
-pub struct Token{
-    pub token_type: TokenType,
-    pub literal:String
+#[derive(PartialEq, Eq, Debug, Clone, Hash)]
+pub enum Token {
+    ILLEGAL,
+    EOF,
+
+    // Identifiers + literals
+    IDENT(String), // add, foobar, x, y, ...
+    INT(i64),   // 1343456
+
+    // Operators
+    ASSIGN,
+    PLUS,
+    MINUS,
+    BANG,
+    ASTERISK,
+    SLASH,
+    LT,
+    GT,
+
+    //Comparison operators
+    EQ,
+    NOT_EQ,
+
+    // Delimiters
+    COMMA,
+    SEMICOLON,
+    LPAREN,
+    RPAREN,
+    LBRACE,
+    RBRACE,
+
+    // Keywords
+    FUNCTION,
+    LET,
+    TRUE,
+    FALSE,
+    IF,
+    ELSE,
+    RETURN,
 }
 impl Token{
-    pub fn new(t:TokenType,l:String)->Token{
-        Token{
-            token_type:t,
-            literal:l
+    pub fn token_type(&self)->String{
+        match self{
+            Token::IDENT(i)=>"ident".to_owned(),
+            Token::INT(i)=>"int".to_owned(),
+            _=>self.to_string().to_lowercase()
+        }
+    }
+    pub fn token_value(&self)->String{
+        match self{
+            Token::IDENT(i)=>i.to_owned(),
+            Token::INT(i)=>i.to_string(),
+            _=>self.to_string().to_lowercase()
         }
     }
 }
-
-pub const ILLEGAL: &str="ILLEGAL";
-pub const EOF: &str = "EOF";
-
-// Identifiers + literals
-pub const IDENT: &str = "IDENT"; // add, foobar, x, y, ...
-pub const INT: &str = "INT"; // 1343456
-
-// Operators
-pub const ASSIGN: &'static str = "=";
-pub const PLUS: &str = "+";
-pub const MINUS: &str = "-";
-pub const BANG:&str="!";
-pub const ASTERISK:&str="*";
-pub const SLASH:&str="/";
-pub const LT:&str="<";
-pub const GT:&str=">";
-
-//Comparison operators
-pub const EQ:&str ="==";
-pub const NOT_EQ:&str="!=";
-
-// Delimiters
-pub const COMMA: &str = ",";
-pub const SEMICOLON: &str = ";";
-pub const LPAREN: &str = "(";
-pub const RPAREN: &str = ")";
-pub const LBRACE: &str = "{";
-pub const RBRACE: &str = "}";
-
-// Keywords
-pub const FUNCTION: &str = "FUNCTION";
-pub const LET: &str = "LET";
-pub const TRUE: &str = "TRUE";
-pub const FALSE: &str = "FALSE";
-pub const IF: &str = "IF";
-pub const ELSE: &str = "ELSE";
-pub const RETURN: &str = "RETURN";
-
+impl fmt::Display for Token{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self{
+            Token::IDENT(x)=>{
+                write!(f, "{}", x)
+            },
+            Token::INT(x)=>{
+                write!(f, "{}", x)
+            },
+            _=> write!(f, "{:?}", self)
+        }
+    }
+}
