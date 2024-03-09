@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ast::{self, Expression, ExpressionStatement, Identifier, LetStatement, Program, ReturnStatement, Statement}, lexer::Lexer, token::{self, Token}};
+use crate::{ast::{self, Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, Program, ReturnStatement, Statement}, lexer::Lexer, token::{self, Token}};
 
 
 #[derive(PartialEq,Eq,Hash)]
@@ -14,8 +14,8 @@ pub enum Precedences{
     CALL,        // myFunction(X)
 }
 
-type PrefixParseFn=fn (&mut Parser)->Box<dyn Expression>;
-type InfixParseFn = fn (ex:dyn Expression)->Box<dyn Expression>;
+type PrefixParseFn=fn (&mut Parser)->Option<Box<dyn Expression>>;
+type InfixParseFn = fn (ex:dyn Expression)->Option<Box<dyn Expression>>;
 pub struct Parser{
     l:Lexer,
     cur_token:Token,
@@ -31,6 +31,7 @@ impl Parser{
         let mut p = Parser { l, cur_token: current, peek_token:peek,errors:vec![],prefix_parse_fns:HashMap::new(),infix_parse_fns:HashMap::new() };
 
         p.register_prefix("ident".to_owned(), Parser::parse_identifier);
+        p.register_prefix("int".to_owned(), Parser::parse_integer_literal);
 
         p
     }
@@ -132,6 +133,8 @@ impl Parser{
         }
         Some(stmt)
     }
+
+
      pub fn parse_expression(&mut self,precedence:Precedences)->Option<Box<dyn Expression>>{
         let prefix=self.prefix_parse_fns.get(&self.cur_token.token_type());
         if prefix.is_none(){
@@ -139,11 +142,22 @@ impl Parser{
         }
         let func=prefix.unwrap();
         let left_exp= func(self);
-        Some(left_exp)
+        left_exp
     }
-    pub fn parse_identifier(&mut self)->Box<dyn Expression>{
-        Box::new(Identifier::new(self.cur_token.token_type(), self.cur_token.token_value()))
+    pub fn parse_identifier(&mut self)->Option<Box<dyn Expression>>{
+        Some(Box::new(Identifier::new(self.cur_token.token_type(), self.cur_token.token_value())))
     }
+    pub fn parse_integer_literal(&mut self)->Option<Box<dyn Expression>>{
+        let parse =self.cur_token.token_value().parse::<i64>();
+        if parse.is_err(){
+            self.errors.push(format!("could not parse {} as integer",self.cur_token.token_value()));
+            return None;
+        }
+        let lit = IntegerLiteral::new(self.cur_token.clone(),parse.unwrap());
+
+        Some(Box::new(lit))
+    }
+
    
     pub fn parse_operator_expression(){
 
@@ -188,7 +202,7 @@ impl Parser{
 mod tests {
     use std::borrow::Borrow;
 
-    use crate::{ast::{Expression, ExpressionStatement, Identifier, Node, Program}, lexer::Lexer};
+    use crate::{ast::{Expression, ExpressionStatement, Identifier, IntegerLiteral, Node, Program}, lexer::Lexer};
 
     use super::Parser;
 
@@ -221,14 +235,51 @@ mod tests {
         if test.is_none(){
 
         }
-        let un=test.unwrap();
-        if un.token_value!="foobar"{
-            
+        let ident=test.unwrap();
+        if ident.token_value!="foobar"{
+           println!("ident.value not foobar, got = {}",ident.token_literal()) ;
+        }
+        if ident.token_literal() !="foobar"{
+            println!("ident.token_literal() not foobar, got ={}",ident.token_literal());
         }
         
+    }
 
+    #[test]
+    fn test_integer_literal_expression(){
 
+        let input="5;";
+        let l = Lexer::new(input);
+        let mut p = Parser::new(l);
+        let program  = p.parse_program();
+        check_parser_errors(&p);
 
+        assert_eq!(program.statements.borrow().len(),1);
+        if program.statements.borrow().len()!=1{
+
+        }
+        let binding = program.statements.borrow();
+        let stmt = binding[0].as_any().downcast_ref::<ExpressionStatement>();
+        if stmt.is_none(){
+            panic!("program.statements[0] is not ExpresstionStatement.");
+        }
+        let stmt = stmt.unwrap();
+        let wrapped = stmt.expression
+        .as_ref().unwrap()
+        .as_any()
+        .downcast_ref::<IntegerLiteral>();
+
+        if wrapped.is_none(){
+            panic!("exp not IntegerLiteral. got = None");
+        }
+        let literal = wrapped.unwrap();
+
+        if literal.integer_value!=5{
+            panic!("literal value not 5, got = {}",literal.integer_value);
+        }
+        if literal.token_literal() !="5"{
+            panic!("literal.token_literal not \"5\" got = {}",literal.token_literal());
+        }
 
 
     }

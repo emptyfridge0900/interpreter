@@ -49,6 +49,8 @@ impl Node for Program {
     }
 }
 
+
+//statement
 pub struct LetStatement {
     pub token: Token,
     pub name: Identifier,
@@ -88,35 +90,7 @@ impl Statement for LetStatement {
     fn statement_node(&self) {}
 }
 
-pub struct Identifier {
-    pub token_type: String,
-    pub token_value: String,
-}
-impl Identifier {
-    pub fn new(token_type: String, token_value: String) -> Identifier {
-        Identifier { token_type, token_value }
-    }
-}
-impl Node for Identifier {
-    fn token_literal(&self) -> String {
-        self.token_value.clone()
-    }
-    fn string(&self) -> String {
-        self.token_value.clone()
-    }
 
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}
-impl Statement for Identifier {
-    fn statement_node(&self) {}
-}
-impl Expression for Identifier{
-    fn expression_node(&self) {
-        todo!()
-    }
-}
 
 pub struct ReturnStatement {
     token: token::Token,
@@ -178,6 +152,67 @@ impl Node for ExpressionStatement {
 }
 impl Statement for ExpressionStatement {
     fn statement_node(&self) {}
+}
+
+//expression
+
+pub struct Identifier {
+    pub token_type: String,
+    pub token_value: String,
+}
+impl Identifier {
+    pub fn new(token_type: String, token_value: String) -> Identifier {
+        Identifier { token_type, token_value }
+    }
+}
+impl Node for Identifier {
+    fn token_literal(&self) -> String {
+        self.token_value.clone()
+    }
+    fn string(&self) -> String {
+        self.token_value.clone()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+impl Expression for Identifier{
+    fn expression_node(&self) {
+        todo!()
+    }
+}
+
+
+pub struct IntegerLiteral{
+    pub token: token::Token,
+    pub integer_value: i64,
+}
+impl IntegerLiteral{
+    pub fn new(token:Token,value:i64)->IntegerLiteral{
+        IntegerLiteral{
+            token,
+            integer_value:value
+        }
+    }
+}
+impl Node for IntegerLiteral{
+    fn token_literal(&self) -> String {
+        self.token.token_value()
+    }
+
+    fn string(&self) -> String {
+        self.token.token_value()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+impl Expression for IntegerLiteral{
+    fn expression_node(&self) {
+    }
 }
 
 #[cfg(test)]
