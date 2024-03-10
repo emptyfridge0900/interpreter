@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ast::{self, Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, Program, ReturnStatement, Statement}, lexer::Lexer, token::{self, Token}};
+use crate::{ast::{self, Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, PrefixExpression, Program, ReturnStatement, Statement}, lexer::Lexer, token::{self, Token}};
 
 
 #[derive(PartialEq,Eq,Hash)]
@@ -32,6 +32,8 @@ impl Parser{
 
         p.register_prefix("ident".to_owned(), Parser::parse_identifier);
         p.register_prefix("int".to_owned(), Parser::parse_integer_literal);
+        p.register_prefix(Token::BANG.token_type(), Parser::parse_prefix_expression);
+        p.register_prefix(Token::MINUS.token_type(), Parser::parse_prefix_expression);
 
         p
     }
@@ -128,6 +130,10 @@ impl Parser{
         let exp =self.parse_expression(Precedences::LOWEST);
         let stmt = ExpressionStatement{token:self.cur_token.clone(),expression:exp};
 
+        //If the peekToken is a token.SEMICOLON, we advance so it’s the curToken. 
+        //If it’s not there, that’s okay too, we don’t add an error to the parser if it’s not there. 
+        //That’s because we want expression statements to have optional semicolons
+        //p.55
         if self.peek_token_is(Token::SEMICOLON){
             self.next_token();
         }
@@ -135,15 +141,17 @@ impl Parser{
     }
 
 
-     pub fn parse_expression(&mut self,precedence:Precedences)->Option<Box<dyn Expression>>{
+    pub fn parse_expression(&mut self,precedence:Precedences)->Option<Box<dyn Expression>>{
         let prefix=self.prefix_parse_fns.get(&self.cur_token.token_type());
         if prefix.is_none(){
+            self.no_prefix_parse_fn_error(self.cur_token.clone());
             return None
         }
         let func=prefix.unwrap();
         let left_exp= func(self);
         left_exp
     }
+
     pub fn parse_identifier(&mut self)->Option<Box<dyn Expression>>{
         Some(Box::new(Identifier::new(self.cur_token.token_type(), self.cur_token.token_value())))
     }
@@ -158,6 +166,16 @@ impl Parser{
         Some(Box::new(lit))
     }
 
+    //All it does is checking whether we have a parsing function associated with p.curToken.Type in the prefix position.
+    //If we do, it calls this parsing function, if not, it returns nil. 
+    //Which it does at the moment, since we haven’t associated any tokens with any parsing functions yet.
+    pub fn parse_prefix_expression(&mut self)->Option<Box<dyn Expression>>{
+        let mut expression=PrefixExpression::new(self.cur_token.clone(),self.cur_token.token_value());
+        self.next_token();
+        let expr = self.parse_expression(Precedences::PREFIX);
+        expression.right.replace(expr.unwrap());
+        Some(Box::new(expression))
+    }
    
     pub fn parse_operator_expression(){
 
@@ -196,13 +214,17 @@ impl Parser{
         let msg = format!("expected next token to be {:?}, got {:?} instead", t, self.peek_token);
         self.errors.push(msg);
     }
+
+    fn no_prefix_parse_fn_error(&mut self, t:Token){
+        self.errors.push(format!("no prefix parse function for {} found",t.token_type()));
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use std::borrow::Borrow;
 
-    use crate::{ast::{Expression, ExpressionStatement, Identifier, IntegerLiteral, Node, Program}, lexer::Lexer};
+    use crate::{ast::{Expression, ExpressionStatement, Identifier, IntegerLiteral, Node, PrefixExpression, Program}, lexer::Lexer};
 
     use super::Parser;
 
@@ -284,6 +306,64 @@ mod tests {
 
     }
 
+    #[test]
+    fn test_parsing_prefix_expression(){
+        let prefix_test:Vec<(&str,&str,i64)> =vec![
+            ("!5;","!",5),
+            ("-15;","-",15),
+            ];
+
+        for tt in prefix_test{
+            let l=Lexer::new(tt.0);
+            let mut p = Parser::new(l);
+            let program = p.parse_program();
+            check_parser_errors(&p);
+
+            if program.statements.borrow().len()!=1{
+                println!("program.statements does not contain {} statements. got = {}",1,program.statements.borrow().len());
+            }
+            let binding = program.statements.borrow();
+            let stmt = binding[0].as_any().downcast_ref::<ExpressionStatement>();
+            if stmt.is_none(){
+                println!("program.statement[0] is not ExpresstionStatement.");
+            }
+
+            let exp = stmt.unwrap()
+            .expression.as_ref().unwrap().as_any().downcast_ref::<PrefixExpression>();
+
+            if exp.is_none(){
+                println!("stmt is not PrefixExpression.");
+            }
+            if exp.unwrap().operator!=tt.1{
+                println!("exp.operator is not {}",tt.1);
+            }
+            let exp=exp.unwrap();
+            if !test_integer_literal(exp.right.as_ref(),tt.2){
+                return;
+            }
+
+
+        }
+    }
+
+    fn test_integer_literal(il:Option<&Box<dyn Expression>>,value:i64)->bool{
+        let integ = il.as_ref().unwrap().as_any().downcast_ref::<IntegerLiteral>();
+        if integ.is_none(){
+            println!("il not IntegerLiteral");
+            return false;
+        }
+        let integ=integ.unwrap();
+        if integ.integer_value!=value{
+            println!("integ.value not {}. got ={}",value,integ.integer_value);
+            return false;
+        }
+        if integ.token_literal() != format!("{}",value){
+            println!("integ.token_literal() not {}. got={}",value,integ.token_literal());
+            return false;
+        }
+        true
+
+    }
 
     fn check_parser_errors(p:&Parser){
         let errors= p.errors();
@@ -293,7 +373,7 @@ mod tests {
 
         println!("parser has {} errors", errors.len());
         for msg in errors{
-            println!("{}",msg);
+            println!("parser error: {}",msg);
         }
     }
 }

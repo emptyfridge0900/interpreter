@@ -1,4 +1,4 @@
-use std::{any::Any, cell::RefCell};
+use std::{any::Any, borrow::Borrow, cell::RefCell, path::Prefix};
 
 use crate::token::{self, Token};
 
@@ -211,6 +211,39 @@ impl Node for IntegerLiteral{
     }
 }
 impl Expression for IntegerLiteral{
+    fn expression_node(&self) {
+    }
+}
+
+pub struct PrefixExpression{
+    pub token:Token,
+    pub operator:String,
+    pub right:Option<Box<dyn Expression>>
+}
+impl PrefixExpression{
+    pub fn new(token:Token,operator:String)->PrefixExpression{
+        PrefixExpression{
+            token,
+            operator,
+            right:None
+        }
+    }
+}
+impl Node for PrefixExpression{
+    fn token_literal(&self) -> String {
+        self.token.token_value()
+    }
+
+    fn string(&self) -> String {
+        let str = self.right.as_ref().unwrap().string().clone();
+        format!("{{{}{}}}",self.operator, str)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+impl Expression for PrefixExpression{
     fn expression_node(&self) {
     }
 }
