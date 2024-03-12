@@ -221,11 +221,11 @@ pub struct PrefixExpression{
     pub right:Option<Box<dyn Expression>>
 }
 impl PrefixExpression{
-    pub fn new(token:Token,operator:String)->PrefixExpression{
+    pub fn new(token:Token,operator:String,right:Option<Box<dyn Expression>>)->PrefixExpression{
         PrefixExpression{
             token,
             operator,
-            right:None
+            right
         }
     }
 }
@@ -236,7 +236,7 @@ impl Node for PrefixExpression{
 
     fn string(&self) -> String {
         let str = self.right.as_ref().unwrap().string().clone();
-        format!("{{{}{}}}",self.operator, str)
+        format!("({}{})",self.operator, str)
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -244,6 +244,42 @@ impl Node for PrefixExpression{
     }
 }
 impl Expression for PrefixExpression{
+    fn expression_node(&self) {
+    }
+}
+
+pub struct InfixExpression{
+    pub token:Token,
+    pub left:Option<Box<dyn Expression>>,
+    pub operator:String,
+    pub right:Option<Box<dyn Expression>>
+}
+impl InfixExpression{
+    pub fn new(token:Token,left:Option<Box<dyn Expression>>,operator:String,right:Option<Box<dyn Expression>>)->InfixExpression{
+        InfixExpression{
+            token,
+            left,
+            operator,
+            right
+        }
+    }
+}
+impl Node for InfixExpression{
+    fn token_literal(&self) -> String {
+        self.token.token_value()
+    }
+
+    fn string(&self) -> String {
+        let left = self.left.as_ref().unwrap().string().clone();
+        let right = self.right.as_ref().unwrap().string().clone();
+        format!("({} {} {})",left,self.operator, right)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+impl Expression for InfixExpression{
     fn expression_node(&self) {
     }
 }

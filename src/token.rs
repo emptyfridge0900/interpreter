@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::{self, write}};
 
-use crate::ast::{Expression, Node, Statement};
+use crate::{ast::{Expression, Node, Statement}, parser::Precedences};
 
 pub type TokenType = String;
 
@@ -57,6 +57,19 @@ impl Token{
             Token::IDENT(i)=>i.to_owned(),
             Token::INT(i)=>i.to_string(),
             _=>self.to_string().to_lowercase()
+        }
+    }
+    pub fn precedence(&self)->Precedences{
+        match self{
+            Token::EQ=>Precedences::EQUALS,
+            Token::NOT_EQ=>Precedences::EQUALS,
+            Token::LT=>Precedences::LESSGREATER,
+            Token::GT=>Precedences::LESSGREATER,
+            Token::PLUS=>Precedences::SUM,
+            Token::MINUS=>Precedences::SUM,
+            Token::SLASH=>Precedences::PRODUCT,
+            Token::ASTERISK=>Precedences::PRODUCT,
+            _=>Precedences::LOWEST
         }
     }
 }
