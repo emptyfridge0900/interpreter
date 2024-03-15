@@ -203,7 +203,7 @@ impl Node for IntegerLiteral{
     }
 
     fn string(&self) -> String {
-        self.token.token_value()
+        self.integer_value.to_string()
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -284,6 +284,35 @@ impl Expression for InfixExpression{
     }
 }
 
+pub struct Boolean{
+    pub token:Token,
+    pub boolean_value:bool
+}
+impl Boolean{
+    pub fn new(token:Token,boolean_value:bool)->Boolean{
+        Boolean{
+            token,
+            boolean_value
+        }
+    }
+}
+impl Node for Boolean{
+    fn token_literal(&self) -> String {
+        self.token.token_value()
+    }
+
+    fn string(&self) -> String {
+        self.boolean_value.to_string()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+impl Expression for Boolean{
+    fn expression_node(&self) {
+    }
+}
 #[cfg(test)]
 mod tests {
     use std::any::Any;

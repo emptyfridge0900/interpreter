@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ast::{self, Expression, ExpressionStatement, Identifier, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression, Program, ReturnStatement, Statement}, lexer::Lexer, token::{self, Token}};
+use crate::{ast::{self, Boolean, Expression, ExpressionStatement, Identifier, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression, Program, ReturnStatement, Statement}, lexer::Lexer, token::{self, Token}};
 
 
 #[derive(PartialEq,Eq,Hash,PartialOrd)]
@@ -43,6 +43,9 @@ impl Parser{
         p.register_infix(Token::NOT_EQ.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::LT.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::GT.token_type(), Parser::parse_infix_expression);
+
+        p.register_prefix(Token::TRUE.token_type(), Parser::parse_boolean);
+        p.register_prefix(Token::FALSE.token_type(), Parser::parse_boolean);
 
         p
     }
@@ -188,6 +191,10 @@ impl Parser{
 
         Some(Box::new(lit))
     }
+    pub fn parse_boolean(&mut self)->Option<Box<dyn Expression>>{
+        Some(Box::new(Boolean::new(self.cur_token.clone(),self.cur_toekn_is(Token::TRUE))))
+    }
+
 
     //All it does is checking whether we have a parsing function associated with p.curToken.Type in the prefix position.
     //If we do, it calls this parsing function, if not, it returns nil. 
@@ -208,9 +215,7 @@ impl Parser{
         Some(Box::new(expression))
     }
    
-    pub fn parse_operator_expression(){
 
-    }
 
     pub fn cur_toekn_is(&self, t: token::Token)->bool{
         self.cur_token == t
@@ -262,7 +267,7 @@ impl Parser{
 mod tests {
     use std::{any::{Any, TypeId}, borrow::Borrow};
 
-    use crate::{ast::{Expression, ExpressionStatement, Identifier, InfixExpression, IntegerLiteral, Node, PrefixExpression, Program}, lexer::Lexer};
+    use crate::{ast::{Boolean, Expression, ExpressionStatement, Identifier, InfixExpression, IntegerLiteral, Node, PrefixExpression, Program}, lexer::Lexer};
 
     use super::Parser;
 
@@ -343,7 +348,43 @@ mod tests {
 
 
     }
+    
+    #[test]
+    fn test_boolean_expression(){
+        let input="true;";
+        let l = Lexer::new(input);
+        let mut p = Parser::new(l);
+        let program  = p.parse_program();
+        check_parser_errors(&p);
 
+        assert_eq!(program.statements.borrow().len(),1);
+        if program.statements.borrow().len()!=1{
+
+        }
+
+        let binding = program.statements.borrow();
+        let stmt = binding[0].as_any().downcast_ref::<ExpressionStatement>();
+        if stmt.is_none(){
+            panic!("program.statements[0] is not ExpresstionStatement.");
+        }
+        let stmt = stmt.unwrap();
+        let boolean = stmt.expression
+        .as_ref().unwrap()
+        .as_any()
+        .downcast_ref::<Boolean>();
+
+        if boolean.is_none(){
+            panic!("exp not Boolean. got = None");
+        }
+        let boolean = boolean.unwrap();
+        if boolean.boolean_value!=true{
+            panic!("Boolean value not {}, got = {}",true, boolean.boolean_value);
+        }
+        if boolean.token_literal() !="true"{
+            panic!("Boolean.token_literal not \"true\" got = {}",boolean.token_literal());
+        }
+
+    }
     #[test]
     fn test_parsing_prefix_expression(){
         let prefix_test:Vec<(&str,&str,i64)> =vec![
@@ -384,15 +425,18 @@ mod tests {
     }
     #[test]
     fn test_parsing_infix_expressions(){
-        let infix_tests:Vec<(&str,i64,&str,i64)> = vec![
-            ("5+5;",5,"+",5),
-            ("5-5;",5,"-",5),
-            ("5*5;",5,"*",5),
-            ("5/5;",5,"/",5),
-            ("5>5;",5,">",5),
-            ("5<5;",5,"<",5),
-            ("5==5;",5,"==",5),
-            ("5!=5;",5,"!=",5),
+        let infix_tests:Vec<(&str,Box<dyn Any>,&str,Box<dyn Any>)> = vec![
+            ("5+5;",Box::new(5_i64),"+",Box::new(5_i64)),
+            ("5-5;",Box::new(5_i64),"-",Box::new(5_i64)),
+            ("5*5;",Box::new(5_i64),"*",Box::new(5_i64)),
+            ("5/5;",Box::new(5_i64),"/",Box::new(5_i64)),
+            ("5>5;",Box::new(5_i64),">",Box::new(5_i64)),
+            ("5<5;",Box::new(5_i64),"<",Box::new(5_i64)),
+            ("5==5;",Box::new(5_i64),"==",Box::new(5_i64)),
+            ("5!=5;",Box::new(5_i64),"!=",Box::new(5_i64)),
+            ("true == true", Box::new(true), "==", Box::new(true)),
+            ("true != false", Box::new(true), "!=", Box::new(false)),
+            ("false == false", Box::new(false), "==", Box::new(false)),
         ];
         for tt in infix_tests{
             let l=Lexer::new(tt.0);
@@ -408,7 +452,9 @@ mod tests {
             if stmt.is_none(){
                 println!("program.statement[0] is not ExpresstionStatement.");
             }
-            test_infix_expression(stmt.unwrap().expression.as_ref(), Box::new(tt.1), tt.2, Box::new(tt.3));
+            if !test_infix_expression(stmt.unwrap().expression.as_ref(), tt.1, tt.2, tt.3){
+                return
+            }
 
             // let exp = stmt.unwrap()
             // .expression.as_ref().unwrap().as_any().downcast_ref::<InfixExpression>();
@@ -445,7 +491,12 @@ mod tests {
             ("3 + 4; -5 * 5","(3 + 4)((-5) * 5)"),
             ("5 > 4 == 3 < 4","((5 > 4) == (3 < 4))"),
             ("5 < 4 != 3 > 4","((5 < 4) != (3 > 4))"),
-            ("3 + 4 * 5 == 3 * 1 + 4 * 5","((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))")
+            ("3 + 4 * 5 == 3 * 1 + 4 * 5","((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
+            ("true","true"),
+            ("false","false"),
+            ("3 > 5 == false","((3 > 5) == false)"),
+            ("3 < 5 == true","((3 < 5) == true)"),
+
         ];
         for tt in tests{
             let l=Lexer::new(tt.0);
@@ -462,6 +513,8 @@ mod tests {
 
     }
 
+
+    
 
     fn test_infix_expression(exp : Option<&Box<dyn Expression>>, left:Box<dyn Any>, operator:&str, right: Box<dyn Any>)->bool{
         let op_exp=exp.as_ref().unwrap().as_any().downcast_ref::<InfixExpression>();
@@ -482,25 +535,19 @@ mod tests {
     }
 
     fn test_literal_expression(exp : Option<&Box<dyn Expression>>, expected:Box<dyn Any>)->bool{
-        let l=TypeId::of::<usize>();
-        let s=TypeId::of::<i64>();
-        let f= TypeId::of::<String>();
-        match (&*expected).type_id(){
-            l=>{
-                println!("usize");
-                test_integer_literal(exp, *expected.downcast::<i64>().unwrap())
-            },
-            s=>{
-                println!("i64");
-                test_integer_literal(exp, *expected.downcast::<i64>().unwrap())
-            },
-            f=>{
-                println!("string");
-                test_identifier(exp, *expected.downcast::<String>().unwrap())
-            }
-            _=>{
-                false
-            }
+
+        if (&*expected).type_id()==TypeId::of::<usize>(){
+            test_integer_literal(exp, *expected.downcast::<usize>().unwrap() as i64)
+        }else if (&*expected).type_id()==TypeId::of::<i32>(){
+            test_integer_literal(exp, *expected.downcast::<i64>().unwrap())
+        }else if (&*expected).type_id()==TypeId::of::<i64>(){
+            test_integer_literal(exp, *expected.downcast::<i64>().unwrap())
+        }else if (&*expected).type_id()==TypeId::of::<String>(){
+            test_identifier(exp, *expected.downcast::<String>().unwrap())
+        }else if (&*expected).type_id()==TypeId::of::<bool>(){
+            test_boolean_literal(exp,*expected.downcast::<bool>().unwrap())
+        }else{
+            false
         }
         
     }
@@ -524,7 +571,7 @@ mod tests {
     }
 
     fn test_integer_literal(il:Option<&Box<dyn Expression>>,value:i64)->bool{
-        let integ = il.as_ref().unwrap().as_any().downcast_ref::<IntegerLiteral>();
+        let integ = il.unwrap().as_any().downcast_ref::<IntegerLiteral>();
         if integ.is_none(){
             println!("il not IntegerLiteral");
             return false;
@@ -540,6 +587,24 @@ mod tests {
         }
         true
 
+    }
+
+    fn test_boolean_literal(exp:Option<&Box<dyn Expression>>,value:bool)->bool{
+        let bo = exp.unwrap().as_any().downcast_ref::<Boolean>();
+        if bo.is_none(){
+            println!("exp no Boolean ");
+            return false;
+        }
+        let bo=bo.unwrap();
+        if bo.boolean_value != value{
+            println!("bo.boolean_value not {}. got={}",value,bo.boolean_value);
+            return false;
+        }
+        if bo.token_literal()!=value.to_string(){
+            println!("bo.token_literal not {}. got={}",value,bo.token_literal());
+            return false;
+        }
+        true
     }
 
     fn check_parser_errors(p:&Parser){
