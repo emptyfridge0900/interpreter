@@ -129,14 +129,14 @@ impl Lexer {
     }
 
     pub fn lookup_ident(ident: &str) -> token::Token {
-        let map: HashMap<String, Token> = HashMap::from([
-            ("fn".to_owned(), Token::FUNCTION),
-            ("let".to_owned(), Token::LET),
-            ("true".to_owned(), Token::TRUE),
-            ("false".to_owned(), Token::FALSE),
-            ("if".to_owned(), Token::IF),
-            ("else".to_owned(), Token::ELSE),
-            ("return".to_owned(), Token::RETURN),
+        let map: HashMap<&str, Token> = HashMap::from([
+            ("fn", Token::FUNCTION),
+            ("let", Token::LET),
+            ("true", Token::TRUE),
+            ("false", Token::FALSE),
+            ("if", Token::IF),
+            ("else", Token::ELSE),
+            ("return", Token::RETURN),
         ]);
         map.get(ident)
             .unwrap_or(&Token::IDENT(ident.to_string()))

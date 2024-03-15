@@ -260,7 +260,7 @@ impl Parser{
 
 #[cfg(test)]
 mod tests {
-    use std::borrow::Borrow;
+    use std::{any::{Any, TypeId}, borrow::Borrow};
 
     use crate::{ast::{Expression, ExpressionStatement, Identifier, InfixExpression, IntegerLiteral, Node, PrefixExpression, Program}, lexer::Lexer};
 
@@ -400,7 +400,7 @@ mod tests {
             let program = p.parse_program();
             check_parser_errors(&p);
 
-             if program.statements.borrow().len()!=1{
+            if program.statements.borrow().len()!=1{
                 println!("program.statements does not contain {} statements. got = {}",1,program.statements.borrow().len());
             }
             let binding = program.statements.borrow();
@@ -408,24 +408,25 @@ mod tests {
             if stmt.is_none(){
                 println!("program.statement[0] is not ExpresstionStatement.");
             }
+            test_infix_expression(stmt.unwrap().expression.as_ref(), Box::new(tt.1), tt.2, Box::new(tt.3));
 
-            let exp = stmt.unwrap()
-            .expression.as_ref().unwrap().as_any().downcast_ref::<InfixExpression>();
+            // let exp = stmt.unwrap()
+            // .expression.as_ref().unwrap().as_any().downcast_ref::<InfixExpression>();
 
-            assert_eq!(exp.is_some(),true);
-            if exp.is_none(){
-                println!("stmt is not InfixExpression.");
-            }
-            let exp=exp.unwrap();
-            if !test_integer_literal(exp.left.as_ref(), tt.1){
-                return
-            }
-            if exp.operator != tt.2{
-                println!("exp.operator is not {} got={}",tt.2,exp.operator);
-            }
-            if !test_integer_literal(exp.right.as_ref(), tt.3){
-                return
-            }
+            // assert_eq!(exp.is_some(),true);
+            // if exp.is_none(){
+            //     println!("stmt is not InfixExpression.");
+            // }
+            // let exp=exp.unwrap();
+            // if !test_integer_literal(exp.left.as_ref(), tt.1){
+            //     return
+            // }
+            // if exp.operator != tt.2{
+            //     println!("exp.operator is not {} got={}",tt.2,exp.operator);
+            // }
+            // if !test_integer_literal(exp.right.as_ref(), tt.3){
+            //     return
+            // }
 
         }
 
@@ -459,6 +460,67 @@ mod tests {
             }
         }
 
+    }
+
+
+    fn test_infix_expression(exp : Option<&Box<dyn Expression>>, left:Box<dyn Any>, operator:&str, right: Box<dyn Any>)->bool{
+        let op_exp=exp.as_ref().unwrap().as_any().downcast_ref::<InfixExpression>();
+        if op_exp.is_none(){
+            return false;
+        }
+        let op_exp= op_exp.unwrap();
+        if !test_literal_expression(op_exp.left.as_ref(), left){
+            return false;
+        }
+        if op_exp.operator!=operator{
+            return false;
+        }
+        if !test_literal_expression(op_exp.right.as_ref(), right){
+            return false;
+        }
+        true
+    }
+
+    fn test_literal_expression(exp : Option<&Box<dyn Expression>>, expected:Box<dyn Any>)->bool{
+        let l=TypeId::of::<usize>();
+        let s=TypeId::of::<i64>();
+        let f= TypeId::of::<String>();
+        match (&*expected).type_id(){
+            l=>{
+                println!("usize");
+                test_integer_literal(exp, *expected.downcast::<i64>().unwrap())
+            },
+            s=>{
+                println!("i64");
+                test_integer_literal(exp, *expected.downcast::<i64>().unwrap())
+            },
+            f=>{
+                println!("string");
+                test_identifier(exp, *expected.downcast::<String>().unwrap())
+            }
+            _=>{
+                false
+            }
+        }
+        
+    }
+
+    fn test_identifier(exp : Option<&Box<dyn Expression>>, value:String)-> bool{
+        let ident = exp.as_ref().unwrap().as_any().downcast_ref::<Identifier>();
+        if ident.is_none(){
+            println!("exp not Identifier.");
+            return false;
+        }
+        let ident=ident.unwrap();
+        if ident.token_value !=value{
+            println!("ident.token_value not {}. got={}",value,ident.token_value);
+            return false;
+        } 
+        if ident.token_literal() != value{
+            println!("ident.token_literal() not {}. got={}",value, ident.token_literal());
+            return false;
+        }
+        true
     }
 
     fn test_integer_literal(il:Option<&Box<dyn Expression>>,value:i64)->bool{

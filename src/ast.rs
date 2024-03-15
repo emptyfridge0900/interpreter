@@ -41,7 +41,7 @@ impl Node for Program {
             .iter()
             .map(|x| x.string())
             .collect();
-        ret.join(" ")
+        ret.join("")
     }
 
     fn as_any(&self) -> &dyn Any {
