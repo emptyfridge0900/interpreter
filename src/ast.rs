@@ -154,6 +154,41 @@ impl Statement for ExpressionStatement {
     fn statement_node(&self) {}
 }
 
+pub struct BlockStatement{
+    pub token:Token,
+    pub statements:Vec<Box<dyn Statement>>
+}
+impl BlockStatement{
+    pub fn new(token:Token)->BlockStatement{
+        BlockStatement{
+            token,
+            statements:vec![]
+        }
+    }
+}
+impl Node for BlockStatement{
+    fn token_literal(&self) -> String {
+        self.token.token_value()
+    }
+
+    fn string(&self) -> String {
+        let ret: Vec<String> = self
+            .statements
+            .iter()
+            .map(|x| x.string())
+            .collect();
+        ret.join("")
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+impl Statement for BlockStatement{
+    fn statement_node(&self) {
+    }
+}
+
 //expression
 
 pub struct Identifier {
@@ -313,6 +348,45 @@ impl Expression for Boolean{
     fn expression_node(&self) {
     }
 }
+
+
+pub struct IfExpression{
+    pub token:Token,
+    pub condition: Option<Box<dyn Expression>>,
+    pub consequence: Option<BlockStatement>,
+    pub alternative: Option<BlockStatement>
+}
+impl IfExpression{
+    pub fn new(token:Token,condition:Option<Box<dyn Expression>>,consequence: Option<BlockStatement>,alternative: Option<BlockStatement>)->IfExpression{
+        IfExpression{
+            token,
+            condition,
+            consequence,
+            alternative
+        }
+    }
+}
+impl Node for IfExpression{
+    fn token_literal(&self) -> String {
+        self.token.token_value()
+    }
+
+    fn string(&self) -> String {
+        if self.alternative.is_none(){
+            format!("if {} {}",self.condition.as_ref().unwrap().string(),self.consequence.as_ref().unwrap().string().clone())
+        }else{
+            format!("if {} {} else {}",self.condition.as_ref().unwrap().string(),self.consequence.as_ref().unwrap().string().clone(), self.alternative.as_ref().unwrap().string().clone())
+        }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+impl Expression for IfExpression{
+    fn expression_node(&self) {
+    }
+}
 #[cfg(test)]
 mod tests {
     use std::any::Any;
@@ -367,7 +441,7 @@ let foobar = 838383;
             return false;
         }
         let let_stmt : &LetStatement = statement.unwrap();
-        if let_stmt.token_literal() != "LET"{
+        if let_stmt.token_literal() != "let"{
             println!("TokenLiteral not 'let'. got={}",let_stmt.token_literal());
             return false;
         }
