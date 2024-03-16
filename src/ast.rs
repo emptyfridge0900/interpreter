@@ -1,4 +1,4 @@
-use std::{any::Any, borrow::Borrow, cell::RefCell, path::Prefix};
+use std::{any::Any, borrow::Borrow, cell::RefCell, clone, path::Prefix};
 
 use crate::token::{self, Token};
 
@@ -191,6 +191,7 @@ impl Statement for BlockStatement{
 
 //expression
 
+#[derive(Clone)]
 pub struct Identifier {
     pub token_type: String,
     pub token_value: String,
@@ -384,6 +385,41 @@ impl Node for IfExpression{
     }
 }
 impl Expression for IfExpression{
+    fn expression_node(&self) {
+    }
+}
+
+pub struct FunctionLiteral{
+    pub token:Token,
+    pub parameters:Vec<Identifier>,
+    pub body:Option<BlockStatement>
+}
+impl FunctionLiteral{
+    pub fn new(token:Token,parameters:Vec<Identifier>,body:Option<BlockStatement>)->FunctionLiteral{
+        FunctionLiteral{
+            token,
+            parameters,
+            body
+        }
+    }
+}
+impl Node for FunctionLiteral{
+    fn token_literal(&self) -> String {
+        self.token.token_value()
+    }
+
+    fn string(&self) -> String {
+        let param=self.parameters.iter()
+            .map(|x| x.string())
+            .collect::<Vec<String>>();
+        format!("{}({}) {}",self.token_literal(),param.join(", "), self.body.as_ref().unwrap().string())
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+impl Expression for FunctionLiteral{
     fn expression_node(&self) {
     }
 }
