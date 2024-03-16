@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        self, BlockStatement, Boolean, Expression, ExpressionStatement, FunctionLiteral,
-        Identifier, IfExpression, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression,
-        Program, ReturnStatement, Statement,
+        self, BlockStatement, Boolean, CallExpression, Expression, ExpressionStatement, FunctionLiteral, Identifier, IfExpression, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression, Program, ReturnStatement, Statement
     },
     lexer::Lexer,
     token::{self, Token},
@@ -71,10 +69,9 @@ impl Parser {
 
         p.register_prefix(Token::IF.token_type(), Parser::parse_if_expression);
 
-        p.register_prefix(
-            Token::FUNCTION.token_type(),
-            Parser::parse_functional_literal,
-        );
+        p.register_prefix(Token::FUNCTION.token_type(),Parser::parse_functional_literal);
+
+        p.register_infix(Token::LPAREN.token_type(), Parser::parse_call_expression);
         p
     }
     pub fn register_prefix(&mut self, token_type: String, func: PrefixParseFn) {
@@ -358,6 +355,29 @@ impl Parser {
         identifiers
     }
 
+    fn parse_call_expression(&mut self,function:Option<Box<dyn Expression>>)->Option<Box<dyn Expression>>{
+        Some(Box::new(CallExpression::new(self.cur_token.clone(),function.unwrap(), self.parse_call_arguments())))
+    }
+    fn parse_call_arguments(&mut self)->Vec<Box<dyn Expression>>{
+        let mut args= vec![];
+        if self.peek_token_is(Token::RPAREN){
+            self.next_token();
+            return args;
+        }
+        self.next_token();
+        args.push(self.parse_expression(Precedences::LOWEST).unwrap());
+        while self.peek_token_is(Token::COMMA){
+            self.next_token();
+            self.next_token();
+            args.push(self.parse_expression(Precedences::LOWEST).unwrap());
+        }
+        if !self.expect_peek(Token::RPAREN){
+            return vec![];
+        }
+
+        args
+    }
+
     fn cur_toekn_is(&self, t: token::Token) -> bool {
         self.cur_token == t
     }
@@ -388,8 +408,8 @@ impl Parser {
 
     fn peek_error(&mut self, t: token::Token) {
         let msg = format!(
-            "expected next token to be {:?}, got {:?} instead",
-            t, self.peek_token
+            "expected next token to be {}, got {} instead",
+            t.token_value(), self.peek_token.token_value()
         );
         self.errors.push(msg);
     }
@@ -418,8 +438,7 @@ mod tests {
 
     use crate::{
         ast::{
-            Boolean, Expression, ExpressionStatement, FunctionLiteral, Identifier, IfExpression,
-            InfixExpression, IntegerLiteral, Node, PrefixExpression, Program,
+            Boolean, CallExpression, Expression, ExpressionStatement, FunctionLiteral, Identifier, IfExpression, InfixExpression, IntegerLiteral, Node, PrefixExpression, Program
         },
         lexer::Lexer,
     };
@@ -553,7 +572,7 @@ mod tests {
             check_parser_errors(&p);
 
             if program.statements.borrow().len() != 1 {
-                println!(
+                panic!(
                     "program.statements does not contain {} statements. got = {}",
                     1,
                     program.statements.borrow().len()
@@ -562,7 +581,7 @@ mod tests {
             let binding = program.statements.borrow();
             let stmt = binding[0].as_any().downcast_ref::<ExpressionStatement>();
             if stmt.is_none() {
-                println!("program.statement[0] is not ExpresstionStatement.");
+                panic!("program.statement[0] is not ExpresstionStatement.");
             }
 
             let exp = stmt
@@ -574,10 +593,10 @@ mod tests {
                 .downcast_ref::<PrefixExpression>();
 
             if exp.is_none() {
-                println!("stmt is not PrefixExpression.");
+                panic!("stmt is not PrefixExpression.");
             }
             if exp.unwrap().operator != tt.1 {
-                println!("exp.operator is not {}", tt.1);
+                panic!("exp.operator is not {}", tt.1);
             }
             let exp = exp.unwrap();
             if !test_integer_literal(exp.right.as_ref(), tt.2) {
@@ -607,7 +626,7 @@ mod tests {
             check_parser_errors(&p);
 
             if program.statements.borrow().len() != 1 {
-                println!(
+                panic!(
                     "program.statements does not contain {} statements. got = {}",
                     1,
                     program.statements.borrow().len()
@@ -616,7 +635,7 @@ mod tests {
             let binding = program.statements.borrow();
             let stmt = binding[0].as_any().downcast_ref::<ExpressionStatement>();
             if stmt.is_none() {
-                println!("program.statement[0] is not ExpresstionStatement.");
+                panic!("program.statement[0] is not ExpresstionStatement.");
             }
             if !test_infix_expression(stmt.unwrap().expression.as_ref(), tt.1, tt.2, tt.3) {
                 return;
@@ -655,10 +674,7 @@ mod tests {
             ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
             ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
             ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
-            (
-                "3 + 4 * 5 == 3 * 1 + 4 * 5",
-                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
-            ),
+            ( "3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
             ("true", "true"),
             ("false", "false"),
             ("3 > 5 == false", "((3 > 5) == false)"),
@@ -668,6 +684,9 @@ mod tests {
             ("2 / (5 + 5)", "(2 / (5 + 5))"),
             ("-(5 + 5)", "(-(5 + 5))"),
             ("!(true == true)", "(!(true == true))"),
+            ("a + add(b * c) + d","((a + add((b * c))) + d)"),
+            ("add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))","add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"),
+            ("add(a + b + c * d / f + g)","add((((a + b) + ((c * d) / f)) + g))")
         ];
         for tt in tests {
             let l = Lexer::new(tt.0);
@@ -691,7 +710,7 @@ mod tests {
         let program = p.parse_program();
         check_parser_errors(&p);
         if program.statements.borrow().len() != 1 {
-            println!(
+            panic!(
                 "program.statements does not contain {} statements. got = {}",
                 1,
                 program.statements.borrow().len()
@@ -700,7 +719,7 @@ mod tests {
         let binding = program.statements.borrow();
         let stmt = binding[0].as_any().downcast_ref::<ExpressionStatement>();
         if stmt.is_none() {
-            println!("program.statement[0] is not ExpresstionStatement.");
+            panic!("program.statement[0] is not ExpresstionStatement.");
         }
         let exp = stmt
             .unwrap()
@@ -710,7 +729,7 @@ mod tests {
             .as_any()
             .downcast_ref::<IfExpression>();
         if exp.is_none() {
-            println!("stmet.expression is not IfExpression");
+            panic!("stmt.expression is not IfExpression");
         }
         let exp = exp.unwrap();
         if !test_infix_expression(exp.condition.as_ref(), Box::new("x"), "<", Box::new("y")) {
@@ -727,7 +746,7 @@ mod tests {
             .as_any()
             .downcast_ref::<ExpressionStatement>();
         if consequence.is_none() {
-            println!("Statement[0] is not ExpressionStatement");
+            panic!("Statement[0] is not ExpressionStatement");
         }
         let consequence = consequence.unwrap();
         if !test_identifier(consequence.expression.as_ref(), "x".to_string()) {
@@ -749,7 +768,7 @@ mod tests {
         let program = p.parse_program();
         check_parser_errors(&p);
         if program.statements.borrow().len() != 1 {
-            eprintln!(
+            panic!(
                 "program.statements does not contain {} statements. got = {}",
                 1,
                 program.statements.borrow().len()
@@ -758,7 +777,7 @@ mod tests {
         let binding = program.statements.borrow();
         let stmt = binding[0].as_any().downcast_ref::<ExpressionStatement>();
         if stmt.is_none() {
-            eprintln!("program.statement[0] is not ExpresstionStatement.");
+            panic!("program.statement[0] is not ExpresstionStatement.");
         }
         let exp = stmt
             .unwrap()
@@ -768,7 +787,7 @@ mod tests {
             .as_any()
             .downcast_ref::<IfExpression>();
         if exp.is_none() {
-            eprintln!("stmet.expression is not IfExpression");
+            panic!("stmet.expression is not IfExpression");
         }
         let exp = exp.unwrap();
         if !test_infix_expression(exp.condition.as_ref(), Box::new("x"), "<", Box::new("y")) {
@@ -785,7 +804,7 @@ mod tests {
             .as_any()
             .downcast_ref::<ExpressionStatement>();
         if consequence.is_none() {
-            eprintln!("Statement[0] is not ExpressionStatement");
+            panic!("Statement[0] is not ExpressionStatement");
         }
         let consequence = consequence.unwrap();
         if !test_identifier(consequence.expression.as_ref(), "x".to_string()) {
@@ -800,7 +819,7 @@ mod tests {
             .as_any()
             .downcast_ref::<ExpressionStatement>();
         if alternative.is_none() {
-            eprintln!("Statement[0] is not ExpressionStatement");
+            panic!("Statement[0] is not ExpressionStatement");
         }
         let alternative = alternative.unwrap();
         if !test_identifier(alternative.expression.as_ref(), "y".to_string()) {
@@ -816,7 +835,7 @@ mod tests {
         let program = p.parse_program();
         check_parser_errors(&p);
         if program.statements.borrow().len() != 1 {
-            eprintln!(
+            panic!(
                 "program.statements does not contain {} statements. got = {}",
                 1,
                 program.statements.borrow().len()
@@ -825,7 +844,7 @@ mod tests {
         let binding = program.statements.borrow();
         let stmt = binding[0].as_any().downcast_ref::<ExpressionStatement>();
         if stmt.is_none() {
-            eprintln!("program.statement[0] is not ExpresstionStatement.");
+            panic!("program.statement[0] is not ExpresstionStatement.");
         }
 
         let function = stmt
@@ -836,11 +855,11 @@ mod tests {
             .as_any()
             .downcast_ref::<FunctionLiteral>();
         if function.is_none() {
-            eprintln!("stmet.expression is not IfExpression");
+            panic!("stmet.expression is not IfExpression");
         }
         let function = function.unwrap();
         if function.parameters.len() != 2 {
-            eprintln!(
+            panic!(
                 "function literal parageters wrong. want 2, got={}",
                 function.parameters.len()
             );
@@ -850,11 +869,18 @@ mod tests {
         test_literal_expression(Some(&par1), Box::new("x"));
         test_literal_expression(Some(&par2), Box::new("y"));
 
-        if function.body.is_none() {}
+        if function.body.is_none() {
+
+        }
+        if function.body.as_ref().unwrap().statements.len() !=1{
+            panic!("function.Body.Statements has not 1 statements. got={}",function.body.as_ref().unwrap().statements.len());
+        }
         let body_stmt = function.body.as_ref().unwrap().statements[0]
             .as_any()
             .downcast_ref::<ExpressionStatement>();
-        if body_stmt.is_none() {}
+        if body_stmt.is_none() {
+            panic!("function body stmt is not ast.ExpressionStatement.");
+        }
 
         test_infix_expression(
             body_stmt.unwrap().expression.as_ref(),
@@ -879,7 +905,7 @@ mod tests {
             check_parser_errors(&p);
 
             if program.statements.borrow().len() != 1 {
-                eprintln!(
+                panic!(
                     "program.statements does not contain {} statements. got = {}",
                     1,
                     program.statements.borrow().len()
@@ -888,7 +914,7 @@ mod tests {
             let binding = program.statements.borrow();
             let stmt = binding[0].as_any().downcast_ref::<ExpressionStatement>();
             if stmt.is_none() {
-                eprintln!("program.statement[0] is not ExpresstionStatement.");
+                panic!("program.statement[0] is not ExpresstionStatement.");
             }
             let stmt = stmt.unwrap();
             let function = stmt.expression.as_ref().unwrap().as_any().downcast_ref::<FunctionLiteral>();
@@ -905,6 +931,43 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_call_expression_parsing(){
+        let input="add(1, 2 * 3, 4 + 5);";
+        let l = Lexer::new(input);
+        let mut p = Parser::new(l);
+        let program = p.parse_program();
+        check_parser_errors(&p);
+        if program.statements.borrow().len() != 1 {
+            panic!(
+                "program.statements does not contain {} statements. got = {}",
+                1,
+                program.statements.borrow().len()
+            );
+        }
+        let binding = program.statements.borrow();
+        let stmt = binding[0].as_any().downcast_ref::<ExpressionStatement>();
+        if stmt.is_none() {
+            panic!("program.statement[0] is not ExpresstionStatement.");
+        }
+        let exp = &stmt.unwrap().expression;
+        let exp= exp.as_ref().unwrap().as_any().downcast_ref::<CallExpression>();
+        if exp.is_none(){
+            panic!("stmt.expression is not CAllExpression");
+        }
+        let exp=exp.unwrap();
+        if !test_identifier(Some(&exp.function), "add".to_string()){
+            return
+        }
+        if exp.arguments.len() != 3{
+            panic!("wrong length of arguments. got={}",exp.arguments.len());
+        }
+        test_literal_expression(Some(&exp.arguments[0]), Box::new(1));
+        test_infix_expression(Some(&exp.arguments[1]), Box::new(2),"*",Box::new(3));
+        test_infix_expression(Some(&exp.arguments[2]), Box::new(4),"+",Box::new(5));
+    }
+
 
     fn test_infix_expression(
         exp: Option<&Box<dyn Expression>>,

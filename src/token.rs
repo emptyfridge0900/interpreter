@@ -69,6 +69,7 @@ impl Token{
             Token::MINUS=>Precedences::SUM,
             Token::SLASH=>Precedences::PRODUCT,
             Token::ASTERISK=>Precedences::PRODUCT,
+            Token::LPAREN=>Precedences::CALL,
             _=>Precedences::LOWEST
         }
     }

@@ -423,6 +423,39 @@ impl Expression for FunctionLiteral{
     fn expression_node(&self) {
     }
 }
+
+
+pub struct CallExpression{
+    pub token:Token,
+    pub function:Box<dyn Expression>,
+    pub arguments:Vec<Box<dyn Expression>>
+}
+impl CallExpression{
+    pub fn new(token:Token,function:Box<dyn Expression>,arguments:Vec<Box<dyn Expression>>)->CallExpression{
+        CallExpression{
+            token,
+            function,
+            arguments
+        }
+    }
+}
+impl Node for CallExpression{
+    fn token_literal(&self) -> String {
+        self.token.token_value()
+    }
+
+    fn string(&self) -> String {
+        format!("{}({})",self.function.string(),self.arguments.iter().map(|x|x.string()).collect::<Vec<String>>().join(", "))
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+impl Expression for CallExpression{
+    fn expression_node(&self) {
+    }
+}
 #[cfg(test)]
 mod tests {
     use std::any::Any;
