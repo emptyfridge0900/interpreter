@@ -22,13 +22,17 @@ pub struct Parser{
     peek_token:Token,
     errors:Vec<String>,
     prefix_parse_fns:HashMap<String,PrefixParseFn>,
-    infix_parse_fns:HashMap<String,InfixParseFn>
+    infix_parse_fns:HashMap<String,InfixParseFn>,
+    
+    //for testing purpose
+    cur:String,
+    peek:String
 }
 impl Parser{
     pub fn new(mut l:Lexer)->Parser{
         let current=l.next_token();
         let peek=l.next_token();
-        let mut p = Parser { l, cur_token: current, peek_token:peek,errors:vec![],prefix_parse_fns:HashMap::new(),infix_parse_fns:HashMap::new() };
+        let mut p = Parser { l, cur_token: current, peek_token:peek,errors:vec![],prefix_parse_fns:HashMap::new(),infix_parse_fns:HashMap::new(),cur:"".to_string(),peek:"".to_string() };
 
         p.register_prefix("ident".to_owned(), Parser::parse_identifier);
         p.register_prefix("int".to_owned(), Parser::parse_integer_literal);
@@ -47,6 +51,7 @@ impl Parser{
         p.register_prefix(Token::TRUE.token_type(), Parser::parse_boolean);
         p.register_prefix(Token::FALSE.token_type(), Parser::parse_boolean);
 
+        p.register_prefix(Token::LPAREN.token_type(), Parser::parse_grouped_expression);
         p
     }
     pub fn register_prefix(&mut self,token_type:String, func:PrefixParseFn){
@@ -58,6 +63,9 @@ impl Parser{
     pub fn next_token(&mut self){
         self.cur_token=self.peek_token.clone();
         self.peek_token=self.l.next_token();
+        //testing
+        self.cur=self.cur_token.token_value().clone();
+        self.peek=self.peek_token.token_value().clone();
     }
     pub fn parse_program(&mut self)->Program{
         let program=ast::Program::new();
@@ -203,7 +211,7 @@ impl Parser{
         let mut expression=PrefixExpression::new(self.cur_token.clone(),self.cur_token.token_value(),None);
         self.next_token();
         let expr = self.parse_expression(Precedences::PREFIX);
-        expression.right.replace(expr.unwrap());
+        expression.right=expr;
         Some(Box::new(expression))
     }
     pub fn parse_infix_expression(&mut self,left:Option<Box<dyn Expression>>)->Option<Box<dyn Expression>>{
@@ -211,8 +219,17 @@ impl Parser{
         let precedence = self.current_precedence();
         self.next_token();
         let right= self.parse_expression(precedence);
-        expression.right.replace(right.unwrap());
+        expression.right=right;
         Some(Box::new(expression))
+    }
+
+    fn parse_grouped_expression(&mut self)->Option<Box<dyn Expression>>{
+        self.next_token();
+        let exp = self.parse_expression(Precedences::LOWEST);
+        if !self.expect_peek(Token::RPAREN){
+           return None; 
+        }
+        exp
     }
    
 
@@ -496,7 +513,11 @@ mod tests {
             ("false","false"),
             ("3 > 5 == false","((3 > 5) == false)"),
             ("3 < 5 == true","((3 < 5) == true)"),
-
+            ("1 + (2 + 3) + 4","((1 + (2 + 3)) + 4)"),
+            ("(5 + 5) * 2","((5 + 5) * 2)"),
+            ("2 / (5 + 5)","(2 / (5 + 5))"),
+            ("-(5 + 5)","(-(5 + 5))"),
+            ("!(true == true)","(!(true == true))")
         ];
         for tt in tests{
             let l=Lexer::new(tt.0);
@@ -512,7 +533,6 @@ mod tests {
         }
 
     }
-
 
     
 
