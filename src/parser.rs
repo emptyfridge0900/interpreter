@@ -89,7 +89,7 @@ impl Parser {
     }
     pub fn parse_program(&mut self) -> Program {
         let program = ast::Program::new();
-        while self.cur_token != Token::EOF {
+        while !self.cur_toekn_is(Token::EOF) {
             let stmt = self.parse_statement();
             if stmt.is_some() {
                 program.statements.borrow_mut().push(stmt.unwrap());
@@ -143,26 +143,26 @@ impl Parser {
         };
 
         //let name = ast::Identifier::new(self.cur_token.to_owned(),self.cur_token.to_string());
-        let stmt = ast::LetStatement::new(let_token, identifier);
+        let mut stmt = ast::LetStatement::new(let_token, identifier);
 
         if !self.expect_peek(Token::ASSIGN) {
             return None;
         }
+        self.next_token();
+        stmt.value=self.parse_expression(Precedences::LOWEST);
 
-        //todo
-        while !self.cur_toekn_is(Token::SEMICOLON) {
+        if self.peek_token_is(Token::SEMICOLON){
             self.next_token();
         }
-
         Some(stmt)
     }
     fn parse_return_statement(&mut self) -> Option<ReturnStatement> {
         let save_token = self.cur_token.clone();
-        let stmt = ReturnStatement::new(save_token);
+        let mut stmt = ReturnStatement::new(save_token);
         self.next_token();
 
-        //todo
-        while !self.cur_toekn_is(Token::SEMICOLON) {
+        stmt.return_value=self.parse_expression(Precedences::LOWEST);
+        if self.peek_token_is(Token::SEMICOLON) {
             self.next_token();
         }
 
@@ -438,13 +438,99 @@ mod tests {
 
     use crate::{
         ast::{
-            Boolean, CallExpression, Expression, ExpressionStatement, FunctionLiteral, Identifier, IfExpression, InfixExpression, IntegerLiteral, Node, PrefixExpression, Program
+            Boolean, CallExpression, Expression, ExpressionStatement, FunctionLiteral, Identifier, IfExpression, InfixExpression, IntegerLiteral, LetStatement, Node, PrefixExpression, Program, ReturnStatement
         },
         lexer::Lexer,
     };
 
     use super::Parser;
 
+    #[test]
+    fn test_let_statements(){
+        let tests:Vec<(&str,&str,Box<dyn Any>)> = vec![
+            ("let x = 5;", "x", Box::new(5)),
+            ("let y = true;", "y", Box::new(true)),
+            ("let foobar = y;", "foobar", Box::new("y")),
+        ];
+
+        for tt in tests{
+
+            let mut l=Lexer::new(tt.0);
+            let mut p= Parser::new(l);
+            
+            let program:Program= p.parse_program();
+            check_parser_errors(&p);
+            
+            if program.statements.borrow().len() != 1{
+                panic!("program.Statements does not contain 1 statements. got={}",program.statements.borrow().len());
+            }
+
+            let stmt = program.statements.borrow();
+            if !test_let_statement(stmt[0].as_any(),tt.1.to_string()){
+                return;
+            }
+
+            if !test_literal_expression(stmt[0].as_any().downcast_ref::<LetStatement>().unwrap().value.as_ref(), tt.2){
+                return;
+            }
+        }
+    }
+
+    fn test_let_statement(s:&dyn Any,name:String)->bool{
+
+        let statement =s.downcast_ref::<LetStatement>();
+        if statement.is_none(){
+            return false;
+        }
+        let let_stmt : &LetStatement = statement.unwrap();
+        if let_stmt.token_literal() != "let"{
+            println!("TokenLiteral not 'let'. got={}",let_stmt.token_literal());
+            return false;
+        }
+        if let_stmt.name.token_value != name{
+            println!("let statement.name.value not {} got={:?}",name, let_stmt.name.token_value);
+            return false;
+        }
+        if let_stmt.name.token_literal() != name{
+            println!("let statement.name.token_literal not {} got={}",name, let_stmt.name.token_literal());
+            return false;
+        }
+        true
+    }
+    
+
+    #[test]
+    fn test_return_statements(){
+        let tests:Vec<(&str,Box<dyn Any>)> = vec![
+            ("return 5;", Box::new(5)),
+            ("return 5-1;", Box::new(4)),
+            ("return true;", Box::new(true)),
+        ];
+
+        for tt in tests{
+
+            let mut l=Lexer::new(tt.0);
+            let mut p= Parser::new(l);
+            
+            let program:Program= p.parse_program();
+            check_parser_errors(&p);
+            
+            if program.statements.borrow().len() != 1{
+                panic!("program.Statements does not contain 1 statements. got={}",program.statements.borrow().len());
+            }
+
+            let stmt = program.statements.borrow();
+            // if !test_return_statement(stmt[0].as_any(),tt.1.to_string()){
+            //     return;
+            // }
+
+            if !test_literal_expression(stmt[0].as_any().downcast_ref::<ReturnStatement>().unwrap().return_value.as_ref(), tt.1){
+                return;
+            }
+        }
+
+    }
+    
     #[test]
     fn test_identifier_expression() {
         let input = "foobar";

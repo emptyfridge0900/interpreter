@@ -94,7 +94,7 @@ impl Statement for LetStatement {
 
 pub struct ReturnStatement {
     token: token::Token,
-    return_value: Option<Box<dyn Expression>>,
+    pub return_value: Option<Box<dyn Expression>>,
 }
 impl ReturnStatement {
     pub fn new(token: Token) -> ReturnStatement {
@@ -463,112 +463,6 @@ mod tests {
     use crate::{ast::Node, lexer::Lexer, parser::Parser, token::{self, Token}};
 
     use super::{Expression, Identifier, LetStatement, Program, ReturnStatement};
-
-
-    #[test]
-    fn test_let_statements(){
-        let input = "
-        let x = 5;
-let  y= 10;
-let foobar = 838383;
-";
-        let mut l=Lexer::new(input);
-        let mut p= Parser::new(l);
-        
-        let program:Program= p.parse_program();
-        check_parser_errors(&p);
-
-        //if program == nil
-        if program.statements.borrow().len()==0{
-            panic!("part_program() return 0 statements");
-            return;
-        }
-
-        if program.statements.borrow().len()!=3{
-            panic!("program.statements does not contain 3 statements. got={}",program.statements.borrow().len());
-            return;
-        }
-        let tests:Vec<String> =vec![
-            "x".to_owned(),
-            "y".to_owned(),
-            "foobar".to_owned(),
-        ];
-        for (i,tt) in tests.into_iter().enumerate(){
-            let stmt=program.statements.borrow();
-            if !test_let_statement(stmt[i].as_ref().as_any(),tt){
-                return;
-            }
-        }
-
-    }
-
-    fn test_let_statement(s:&dyn Any,name:String)->bool{
-
-
-        let statement =s.downcast_ref::<LetStatement>();
-        if statement.is_none(){
-            return false;
-        }
-        let let_stmt : &LetStatement = statement.unwrap();
-        if let_stmt.token_literal() != "let"{
-            println!("TokenLiteral not 'let'. got={}",let_stmt.token_literal());
-            return false;
-        }
-        if let_stmt.name.token_value != name{
-            println!("let statement.name.value not {} got={:?}",name, let_stmt.name.token_value);
-            return false;
-        }
-        if let_stmt.name.token_literal() != name{
-            println!("let statement.name.token_literal not {} got={}",name, let_stmt.name.token_literal());
-            return false;
-        }
-        true
-    }
-
-    fn check_parser_errors(p:&Parser){
-        let errors= p.errors();
-        if errors.len()==0{
-            return
-        }
-
-        println!("parser has {} errors", errors.len());
-        for msg in errors{
-            println!("{}",msg);
-        }
-    }
-    #[test]
-    fn test_return_statements(){
-        let input = "
-        return 5;
-return 10;
-return 993322;
-";
-        let mut l=Lexer::new(input);
-        let mut p= Parser::new(l);
-        
-        let program:Program= p.parse_program();
-        check_parser_errors(&p);
-
-
-        assert_eq!(program.statements.borrow().len(),3);
-        if program.statements.borrow().len()!=3{
-            println!("program.statements does not contain 3 statements. got={}",program.statements.borrow().len());
-            return;
-        }
-        
-        for stmt in program.statements.borrow().iter(){
-            let return_statement =stmt.as_any().downcast_ref::<ReturnStatement>();
-            if return_statement.is_none(){
-                println!("statement not ReturnStatement");
-                continue;
-            }
-            let return_stmt  = return_statement.unwrap();
-            if return_stmt.token_literal() != "return"{
-                println!("return_stmt.token_literal not 'return', got ={}",return_stmt.token_literal());
-            }
-        }
-
-    }
 
 
     #[test]
