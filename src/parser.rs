@@ -25,7 +25,7 @@ pub struct Parser {
     l: Lexer,
     cur_token: Token,
     peek_token: Token,
-    errors: Vec<String>,
+    pub errors: Vec<String>,
     prefix_parse_fns: HashMap<String, PrefixParseFn>,
     infix_parse_fns: HashMap<String, InfixParseFn>,
 
@@ -409,7 +409,7 @@ impl Parser {
     fn peek_error(&mut self, t: token::Token) {
         let msg = format!(
             "expected next token to be {}, got {} instead",
-            t.token_value(), self.peek_token.token_value()
+            t.token_value(), self.peek_token.token_type()
         );
         self.errors.push(msg);
     }
