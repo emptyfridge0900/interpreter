@@ -1,6 +1,6 @@
 use std::io::{stdin, stdout, Write};
 
-use crate::{ast::{Node, Program}, lexer::{self, Lexer}, parser::Parser, token::{self, Token}};
+use crate::{ast::{Node, Program}, evaluator::eval, lexer::{self, Lexer}, object::{self, Object}, parser::Parser, token::{self, Token}};
 
 pub fn start(){
     loop{
@@ -17,6 +17,11 @@ pub fn start(){
             continue;
         }
         println!("{}",program.string());
+        let evaludated = eval(program.as_any());
+        if evaludated != Object::Null{
+           println!("{}",evaludated.inspect()); 
+        }
+        
 
     }
 }
