@@ -1,28 +1,42 @@
 use std::any::{Any, TypeId};
 
 use crate::{
-    ast::{ExpressionStatement, IntegerLiteral, Node, Program, Statement},
+    ast::{Boolean, ExpressionStatement, IntegerLiteral, Node, PrefixExpression, Program, Statement},
     object::Object,
 };
+
+const TRUE: Object= Object::Boolean(true);
+const FALSE: Object= Object::Boolean(false);
+const NULL:Object = Object::Null;
 
 pub fn eval(node: &dyn Any) -> Object {
     let ret = 
     if (&*node).type_id() == TypeId::of::<Program>(){
-        let ddd = node.downcast_ref::<Program>();
-        let binding = ddd.unwrap().statements.borrow();
+        let program = node.downcast_ref::<Program>();
+        let binding = program.unwrap().statements.borrow();
         let brow = binding.iter().map(|x|x).collect();
         evaluate_statements(brow)
     } else if (&*node).type_id() == TypeId::of::<ExpressionStatement>(){
-        let ddd = node.downcast_ref::<ExpressionStatement>();
-        eval(ddd.unwrap().expression.as_ref().unwrap().as_any())
+        let exp_stmt = node.downcast_ref::<ExpressionStatement>();
+        eval(exp_stmt.unwrap().expression.as_ref().unwrap().as_any())
         
     } else if (&*node).type_id() == TypeId::of::<IntegerLiteral>() {
-        let ddd = node.downcast_ref::<IntegerLiteral>();
-        let ret = ddd.unwrap().integer_value;
+        let integer_literal = node.downcast_ref::<IntegerLiteral>();
+        let ret = integer_literal.unwrap().integer_value;
         Object::Integer(ret)
 
+    } else if (&*node).type_id() == TypeId::of::<Boolean>() {
+        let boolean = node.downcast_ref::<Boolean>();
+        let ret = boolean.unwrap().boolean_value;
+        native_boolean_to_boolean_object(ret)
+
+    } else if (&*node).type_id() == TypeId::of::<PrefixExpression>() {
+        let prefix_exp = node.downcast_ref::<PrefixExpression>();
+        let x =prefix_exp.unwrap();
+        let right = eval(x.right.as_ref().unwrap().as_any());
+        eval_prefix_expression(&prefix_exp.unwrap().operator,right)
     } else {
-        Object::Null
+        NULL
     };
 
     ret
@@ -35,6 +49,35 @@ fn evaluate_statements(stmt:Vec<&Box<dyn Statement>>)->Object{
     }
     result
 }
+fn native_boolean_to_boolean_object(input:bool)->Object{
+    if input{
+        return TRUE;
+    }
+    FALSE
+}
+fn eval_prefix_expression(operator:&str, right:Object)-> Object{
+    match operator{
+        "!"=>eval_bang_operator_expression(right),
+        "-"=>eval_minus_prefix_operator_expression(right),
+        _=>NULL
+    }
+}
+fn eval_bang_operator_expression(right:Object)->Object{
+    match right{
+        TRUE=>FALSE,
+        FALSE=>TRUE,
+        NULL=>TRUE,
+        _=>FALSE
+        
+    }
+}
+fn eval_minus_prefix_operator_expression(right:Object)->Object{
+    match right{
+        Object::Integer(i)=>Object::Integer(-i),
+        _=>NULL
+    } 
+    
+}
 #[cfg(test)]
 mod tests {
     use crate::{ast::Node, lexer::Lexer, object::Object, parser::Parser};
@@ -43,10 +86,27 @@ mod tests {
 
     #[test]
     fn test_eval_integer_expression() {
-        let tests: Vec<(&str, i64)> = vec![("5", 5), ("10", 10)];
+        let tests: Vec<(&str, i64)> = vec![("5", 5), ("10", 10),("-5",-5),("-10",-10)];
         for tt in tests {
             let evaluated = test_eval(tt.0);
             test_integer_object(evaluated, tt.1);
+        }
+    }
+    #[test]
+    fn test_eval_boolean_expression(){
+        let tests:Vec<(&str,bool)> = vec![("true",true),("false",false)];
+
+        for tt in tests {
+            let evaluated = test_eval(tt.0);
+            test_boolean_object(evaluated, tt.1);
+        }
+    }
+    #[test]
+    fn test_bang_operator(){
+        let tests:Vec<(&str,bool)> =vec![("!true",false),("!false",true),("!5",false),("!!true",true),("!!false",false),("!!5",true)];
+        for tt in tests{
+            let evaluated = test_eval(tt.0);
+            test_boolean_object(evaluated, tt.1);
         }
     }
 
@@ -74,7 +134,26 @@ mod tests {
             );
             return false;
         }
+        true
+    }
 
+    fn test_boolean_object(obj: Object, expected: bool)->bool{
+        let result = match obj {
+            Object::Boolean(b) => Some(b),
+            _ => None,
+        };
+        if result.is_none() {
+            println!("object is not Boolean. got={}", obj.get_type());
+            return false;
+        }
+        if result.unwrap() != expected{
+            println!(
+                "object has wrong value. got={}, want ={}",
+                result.unwrap(),
+                expected
+            );
+            return false;
+        }
         true
     }
 }

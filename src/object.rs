@@ -1,7 +1,8 @@
 use std::fmt::format;
 
 
-#[derive(PartialEq)]
+
+#[derive(PartialEq,Eq)]
 pub enum Object{
     Integer(i64),
     Boolean(bool),
