@@ -13,7 +13,6 @@ impl Object{
             Object::Integer(..)=>"INTEGER",
             Object::Boolean(..)=>"BOOLEAN",
             Object::Null=>"NULL",
-            _=>"testing"
         }
     }
     pub fn inspect(&self)->String{
@@ -21,7 +20,6 @@ impl Object{
             Object::Integer(val)=>format!("{}",val),
             Object::Boolean(val)=>format!("{}",val),
             Object::Null=>format!("null"),
-            _=>"testing".to_string()
         }
     }
 }

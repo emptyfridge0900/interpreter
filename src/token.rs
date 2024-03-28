@@ -104,7 +104,6 @@ impl fmt::Display for Token{
             Token::IF=>write!(f,"IF"),
             Token::ELSE=>write!(f,"ELSE"),
             Token::RETURN=>write!(f,"RETURN"),
-            _=> write!(f, "{:?}", self)
         }
     }
 }
