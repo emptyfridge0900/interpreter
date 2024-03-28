@@ -1,6 +1,6 @@
 use std::io::{stdin, stdout, Write};
 
-use crate::{ast::{Node, Program}, evaluator::eval, lexer::{self, Lexer}, object::{self, Object}, parser::Parser, token::{self, Token}};
+use crate::{ast::Node, evaluator::eval, lexer::Lexer, object::Object, parser::Parser};
 
 pub fn start(){
     loop{
@@ -8,7 +8,7 @@ pub fn start(){
         print!(">>");
         let _=stdout().flush();
         stdin().read_line(&mut s).expect("Did not enter a correct string");
-        let mut l= Lexer::new(&s);
+        let l= Lexer::new(&s);
         let mut p = Parser::new(l);
         let program = p.parse_program();
         

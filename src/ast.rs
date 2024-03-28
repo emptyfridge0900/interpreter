@@ -1,4 +1,4 @@
-use std::{any::Any, borrow::Borrow, cell::RefCell, clone, path::Prefix};
+use std::{any::Any, cell::RefCell};
 
 use crate::token::{self, Token};
 
@@ -458,12 +458,8 @@ impl Expression for CallExpression{
 }
 #[cfg(test)]
 mod tests {
-    use std::any::Any;
-
-    use crate::{ast::Node, lexer::Lexer, parser::Parser, token::{self, Token}};
-
-    use super::{Expression, Identifier, LetStatement, Program, ReturnStatement};
-
+    use crate::{ast::Node, token::Token};
+    use super::{Expression, Identifier, LetStatement, Program};
 
     #[test]
     pub fn test_string(){

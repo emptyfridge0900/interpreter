@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::from_utf8};
 
-use crate::token::{self, Token, TokenType};
+use crate::token::{self, Token};
 
 pub struct Lexer {
     pub input: Vec<u8>,
@@ -51,7 +51,7 @@ impl Lexer {
     }
 
     pub fn next_token(&mut self) -> Token {
-        let mut tok: token::Token;
+        let tok: token::Token;
         self.skip_whitespace();
         match self.ch {
             b'=' => {
@@ -59,7 +59,7 @@ impl Lexer {
                     if self.peek_char() == b'=' {
                         let ch = self.ch;
                         self.read_char();
-                        let lit = from_utf8(&[ch, self.ch]).unwrap().to_string();
+                        from_utf8(&[ch, self.ch]).unwrap().to_string();
                         Token::EQ
                     } else {
                         Token::ASSIGN
@@ -73,7 +73,7 @@ impl Lexer {
                     if self.peek_char() == b'=' {
                         let ch = self.ch;
                         self.read_char();
-                        let lit = from_utf8(&[ch, self.ch]).unwrap().to_string();
+                        from_utf8(&[ch, self.ch]).unwrap().to_string();
                         Token::NOT_EQ
                     } else {
                         Token::BANG

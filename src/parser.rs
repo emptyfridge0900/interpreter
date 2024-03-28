@@ -388,7 +388,7 @@ impl Parser {
     ///which changes the current_token value then set the next peek_token
     fn expect_peek(&mut self, t: token::Token) -> bool {
         //if both expect token and peek token are Token::IDENT type
-        if let (Token::IDENT(x), Token::IDENT(y)) = (t.clone(), self.peek_token.clone()) {
+        if let (Token::IDENT(_x), Token::IDENT(_y)) = (t.clone(), self.peek_token.clone()) {
             self.next_token();
             return true;
         }
@@ -431,10 +431,7 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        any::{Any, TypeId},
-        borrow::Borrow,
-    };
+    use std::any::{Any, TypeId};
 
     use crate::{
         ast::{
@@ -455,7 +452,7 @@ mod tests {
 
         for tt in tests{
 
-            let mut l=Lexer::new(tt.0);
+            let l=Lexer::new(tt.0);
             let mut p= Parser::new(l);
             
             let program:Program= p.parse_program();
@@ -509,7 +506,7 @@ mod tests {
 
         for tt in tests{
 
-            let mut l=Lexer::new(tt.0);
+            let l=Lexer::new(tt.0);
             let mut p= Parser::new(l);
             
             let program:Program= p.parse_program();

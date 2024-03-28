@@ -1,7 +1,7 @@
 use std::any::{Any, TypeId};
 
 use crate::{
-    ast::{Boolean, ExpressionStatement, IntegerLiteral, Node, PrefixExpression, Program, Statement},
+    ast::{Boolean, ExpressionStatement, IntegerLiteral, PrefixExpression, Program, Statement},
     object::Object,
 };
 

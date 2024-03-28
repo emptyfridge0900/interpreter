@@ -1,6 +1,6 @@
-use std::{collections::HashMap, fmt::{self, write}};
+use std::fmt::{self};
 
-use crate::{ast::{Expression, Node, Statement}, parser::Precedences};
+use crate::parser::Precedences;
 
 pub type TokenType = String;
 
