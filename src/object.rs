@@ -1,5 +1,5 @@
 
-#[derive(PartialEq,Eq)]
+#[derive(PartialEq,Eq,Clone)]
 pub enum Object{
     Integer(i64),
     Boolean(bool),

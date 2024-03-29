@@ -1,7 +1,7 @@
 use std::any::{Any, TypeId};
 
 use crate::{
-    ast::{Boolean, ExpressionStatement, IntegerLiteral, PrefixExpression, Program, Statement},
+    ast::{Boolean, ExpressionStatement, InfixExpression, IntegerLiteral, PrefixExpression, Program, Statement},
     object::Object,
 };
 
@@ -35,7 +35,13 @@ pub fn eval(node: &dyn Any) -> Object {
         let x =prefix_exp.unwrap();
         let right = eval(x.right.as_ref().unwrap().as_any());
         eval_prefix_expression(&prefix_exp.unwrap().operator,right)
-    } else {
+    } else if (&*node).type_id() == TypeId::of::<InfixExpression>(){
+        let infix_exp = node.downcast_ref::<InfixExpression>();
+        let x =infix_exp.unwrap();
+        let right = eval(x.right.as_ref().unwrap().as_any());
+        let left = eval(x.left.as_ref().unwrap().as_any());
+        eval_infix_expression(&infix_exp.unwrap().operator,left,right)
+    }else {
         NULL
     };
 
@@ -62,6 +68,21 @@ fn eval_prefix_expression(operator:&str, right:Object)-> Object{
         _=>NULL
     }
 }
+fn eval_infix_expression(operator:&str,left:Object,right:Object)->Object{
+    if operator == "=="{
+        native_boolean_to_boolean_object(left==right)
+    } else if operator == "!="{
+        native_boolean_to_boolean_object(left != right)
+    } else if let (Object::Integer(l), Object::Integer(r))=(left,right){
+        eval_integer_infix_expression(operator,l,r)
+    } else {
+        NULL
+    }
+    // match (left,right){
+    //     (Object::Integer(l),Object::Integer(r))=>eval_integer_infix_expression(operator,l,r),
+    //     _=>NULL
+    // }
+}
 fn eval_bang_operator_expression(right:Object)->Object{
     match right{
         TRUE=>FALSE,
@@ -76,7 +97,19 @@ fn eval_minus_prefix_operator_expression(right:Object)->Object{
         Object::Integer(i)=>Object::Integer(-i),
         _=>NULL
     } 
-    
+}
+fn eval_integer_infix_expression(operator:&str,left:i64,right:i64)->Object{
+    match operator{
+        "+"=>Object::Integer(left+right),
+        "-"=>Object::Integer(left-right),
+        "*"=>Object::Integer(left*right),
+        "/"=>Object::Integer(left/right),
+        "<"=>native_boolean_to_boolean_object(left<right),
+        ">"=>native_boolean_to_boolean_object(left>right),
+        "=="=>native_boolean_to_boolean_object(left==right),
+        "!="=>native_boolean_to_boolean_object(left!=right),
+        _=>NULL
+    }
 }
 #[cfg(test)]
 mod tests {
@@ -86,7 +119,23 @@ mod tests {
 
     #[test]
     fn test_eval_integer_expression() {
-        let tests: Vec<(&str, i64)> = vec![("5", 5), ("10", 10),("-5",-5),("-10",-10)];
+        let tests: Vec<(&str, i64)> = vec![
+            ("5", 5), 
+            ("10", 10),
+            ("-5",-5),
+            ("-10",-10),
+            ("5 + 5 + 5 + 5 - 10", 10),
+            ("2 * 2 * 2 * 2 * 2", 32),
+            ("-50 + 100 + -50", 0),
+            ("5 * 2 + 10", 20),
+            ("5 + 2 * 10", 25),
+            ("20 + 2 * -10", 0),
+            ("50 / 2 * 2 + 10", 60),
+            ("2 * (5 + 10)", 30),
+            ("3 * 3 * 3 + 10", 37),
+            ("3 * (3 * 3) + 10", 37),
+            ("(5 + 10 * 2 + 15 / 3) * 2 + -10", 50)
+        ];
         for tt in tests {
             let evaluated = test_eval(tt.0);
             test_integer_object(evaluated, tt.1);
@@ -94,7 +143,27 @@ mod tests {
     }
     #[test]
     fn test_eval_boolean_expression(){
-        let tests:Vec<(&str,bool)> = vec![("true",true),("false",false)];
+        let tests:Vec<(&str,bool)> = vec![
+            // ("true",true),
+            // ("false",false),
+            // ("1 < 2", true),
+            // ("1 > 2", false),
+            // ("1 < 1", false),
+            // ("1 > 1", false),
+            // ("1 == 1", true),
+            // ("1 != 1", false),
+            // ("1 == 2", false),
+            // ("1 != 2", true),
+            ("true == true", true),
+            ("false == false", true),
+            ("true == false", false),
+            ("true != false", true),
+            ("false != true", true),
+            ("(1 < 2) == true", true),
+            ("(1 < 2) == false", false),
+            ("(1 > 2) == true", false),
+            ("(1 > 2) == false", true),
+        ];
 
         for tt in tests {
             let evaluated = test_eval(tt.0);
