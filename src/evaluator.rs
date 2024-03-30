@@ -32,12 +32,21 @@ pub fn eval(node: &dyn Any) -> Object {
         let prefix_exp = node.downcast_ref::<PrefixExpression>();
         let x =prefix_exp.unwrap();
         let right = eval(x.right.as_ref().unwrap().as_any());
+        if is_error(right.clone()){
+            return right;
+        }
         eval_prefix_expression(&prefix_exp.unwrap().operator,right)
     } else if (&*node).type_id() == TypeId::of::<InfixExpression>(){
         let infix_exp = node.downcast_ref::<InfixExpression>();
         let x =infix_exp.unwrap();
-        let right = eval(x.right.as_ref().unwrap().as_any());
         let left = eval(x.left.as_ref().unwrap().as_any());
+        if is_error(left.clone()){
+            return left;
+        }
+        let right = eval(x.right.as_ref().unwrap().as_any());
+        if is_error(right.clone()){
+            return right;
+        }
         eval_infix_expression(&infix_exp.unwrap().operator,left,right)
     } else if (&*node).type_id() == TypeId::of::<BlockStatement>(){
         let statement = node.downcast_ref::<BlockStatement>();
@@ -50,9 +59,12 @@ pub fn eval(node: &dyn Any) -> Object {
     } else if (&*node).type_id() == TypeId::of::<ReturnStatement>(){
         let ret_statement = node.downcast_ref::<ReturnStatement>();
         let val = eval(ret_statement.unwrap().return_value.as_ref().unwrap().as_any());
+        if is_error(val.clone()){
+            return val;
+        }
         Object::Return(Box::new(val))
     }else {
-        Object::Unkown
+        Object::Unknown
     };
 
     ret
@@ -64,8 +76,13 @@ fn eval_program(program:&Program)->Object{
     let mut result:Object = Object::Null;
     for statement in stmt{
         result = eval(statement.as_any());
-        if let Object::Return(value) = result{
-            return *value;
+        // if let Object::Return(value) = result{
+        //     return *value;
+        // }
+        match result{
+            Object::Return(value)=>return *value,
+            Object::Error(message)=>return Object::Error(message),
+            _=>continue
         }
     }
     result
@@ -74,15 +91,14 @@ fn eval_block_statement(block:&BlockStatement)->Object{
     let mut result:Object = Object::Null;
     for statement in &block.statements{
         result = eval(statement.as_any());
-        if result.get_type() == "RETURN_VALUE"{
-            return result;
-        }
-        if let Object::Return(value)=result{
-            return *value
+
+        match result{
+            Object::Return(val)=>return Object::Return(val),
+            Object::Error(message)=>return Object::Error(message),
+            _=>continue
         }
     }
-    NULL
-
+    result
 }
 
 fn native_boolean_to_boolean_object(input:bool)->Object{
@@ -95,7 +111,7 @@ fn eval_prefix_expression(operator:&str, right:Object)-> Object{
     match operator{
         "!"=>eval_bang_operator_expression(right),
         "-"=>eval_minus_prefix_operator_expression(right),
-        _=>NULL
+        _=>new_error(format!("unknown operator: {} {}",operator,right.get_type()))
     }
 }
 fn eval_infix_expression(operator:&str,left:Object,right:Object)->Object{
@@ -103,10 +119,12 @@ fn eval_infix_expression(operator:&str,left:Object,right:Object)->Object{
         native_boolean_to_boolean_object(left==right)
     } else if operator == "!="{
         native_boolean_to_boolean_object(left != right)
-    } else if let (Object::Integer(l), Object::Integer(r))=(left,right){
+    } else if let (Object::Integer(l), Object::Integer(r))=(left.clone(),right.clone()){
         eval_integer_infix_expression(operator,l,r)
+    } else if left.get_type() != right.get_type(){
+        new_error(format!("type mismatch: {} {} {}",left.get_type(),operator,right.get_type()))
     } else {
-        NULL
+        new_error(format!("unknown operator: {} {} {}",left.get_type(),operator,right.get_type()))
     }
     // match (left,right){
     //     (Object::Integer(l),Object::Integer(r))=>eval_integer_infix_expression(operator,l,r),
@@ -125,10 +143,11 @@ fn eval_bang_operator_expression(right:Object)->Object{
 fn eval_minus_prefix_operator_expression(right:Object)->Object{
     match right{
         Object::Integer(i)=>Object::Integer(-i),
-        _=>NULL
+        _=>new_error(format!("unknown operator: -{}",right.get_type()))
     } 
 }
 fn eval_integer_infix_expression(operator:&str,left:i64,right:i64)->Object{
+
     match operator{
         "+"=>Object::Integer(left+right),
         "-"=>Object::Integer(left-right),
@@ -138,11 +157,14 @@ fn eval_integer_infix_expression(operator:&str,left:i64,right:i64)->Object{
         ">"=>native_boolean_to_boolean_object(left>right),
         "=="=>native_boolean_to_boolean_object(left==right),
         "!="=>native_boolean_to_boolean_object(left!=right),
-        _=>NULL
+        _=>new_error(format!("unknown operator: {} {} {}",left, operator, right))
     }
 }
 fn eval_if_expression(ie:&IfExpression)->Object{
     let condition = eval(ie.condition.as_ref().unwrap().as_any());
+    if is_error(condition.clone()){
+        return condition;
+    }
     if is_truthy(condition){
         eval(ie.consequence.as_ref().unwrap().as_any())
     } else if ie.alternative.is_some(){
@@ -158,6 +180,15 @@ fn is_truthy(obj:Object)->bool{
         FALSE=>false,
         _=>true
     }
+}
+fn new_error(format:String)->Object{
+    Object::Error(format)
+}
+fn is_error(obj:Object)->bool{
+    if obj.get_type()=="ERROR"{
+        return true;
+    }
+    false
 }
 #[cfg(test)]
 mod tests {
@@ -234,7 +265,7 @@ mod tests {
             ("if (true) { 10 }", Box::new(10_i64)),
             ("if (false) { 10 }", Box::new(Object::Null)),
             ("if (1) { 10 }", Box::new(10_i64)),
-            ("if (1 < 2) { 10 }", Box::new(10)),
+            ("if (1 < 2) { 10 }", Box::new(10_i64)),
             ("if (1 > 2) { 10 }", Box::new(Object::Null)),
             ("if (1 > 2) { 10 } else { 20 }", Box::new(20_i64)),
             ("if (1 < 2) { 10 } else { 20 }", Box::new(10_i64)),
@@ -262,6 +293,59 @@ mod tests {
             let evaluated = test_eval(tt.0);
             test_integer_object(evaluated, tt.1);
         }
+    }
+    #[test]
+    fn test_error_handling(){
+        let tests:Vec<(&str,&str)> = vec![
+            (
+            "5 + true;",
+            "type mismatch: INTEGER + BOOLEAN",
+            ),
+            (
+            "5 + true; 5;",
+            "type mismatch: INTEGER + BOOLEAN",
+            ),
+            (
+            "-true",
+            "unknown operator: -BOOLEAN",
+            ),
+            (
+            "true + false;",
+            "unknown operator: BOOLEAN + BOOLEAN",
+            ),
+            (
+            "5; true + false; 5",
+            "unknown operator: BOOLEAN + BOOLEAN",
+            ),
+            (
+            "if (10 > 1) { true + false; }",
+            "unknown operator: BOOLEAN + BOOLEAN",
+            ),
+            (
+"
+if (10 > 1) {
+if (10 > 1) {
+return true + false;
+}
+return 1;
+}
+",
+"unknown operator: BOOLEAN + BOOLEAN",
+            ),
+        ];
+        for tt in tests{
+            let evaluated =  test_eval(tt.0);
+            if let Object::Error(message) = evaluated.clone(){
+                if message!=tt.1{
+                    println!("wrong error message. expected={}, got={}",tt.1,message);
+                }else{
+                    continue;
+                }
+            }
+            println!("no error object returned. got={:?}",evaluated);
+        }
+
+
     }
 
     fn test_eval(input: &str) -> Object {

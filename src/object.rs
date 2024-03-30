@@ -5,7 +5,8 @@ pub enum Object{
     Boolean(bool),
     Null,
     Return(Box<Object>),
-    Unkown
+    Error(String),
+    Unknown
 }
 
 impl Object{
@@ -15,7 +16,8 @@ impl Object{
             Object::Boolean(..)=>"BOOLEAN",
             Object::Null=>"NULL",
             Object::Return(..)=>"RETURN_VALUE",
-            Object::Unkown=>"UNKOWN",
+            Object::Error(..)=>"ERROR",
+            Object::Unknown=>"UNKNOWN",
         }
     }
     pub fn inspect(&self)->String{
@@ -24,7 +26,8 @@ impl Object{
             Object::Boolean(val)=>format!("{}",val),
             Object::Null=>format!("null"),
             Object::Return(val)=>format!("{}",val.inspect()),
-            Object::Unkown=>format!("unkown"),
+            Object::Error(msg)=>format!("ERROR: {}",msg),
+            Object::Unknown=>format!("unknown"),
         }
     }
 }
