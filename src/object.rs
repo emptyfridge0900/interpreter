@@ -1,10 +1,10 @@
 
-#[derive(PartialEq,Eq,Clone)]
+#[derive(PartialEq,Eq,Clone,Debug)]
 pub enum Object{
     Integer(i64),
     Boolean(bool),
     Null,
-
+    Unkown
 }
 
 impl Object{
@@ -13,6 +13,7 @@ impl Object{
             Object::Integer(..)=>"INTEGER",
             Object::Boolean(..)=>"BOOLEAN",
             Object::Null=>"NULL",
+            Object::Unkown=>"UNKOWN",
         }
     }
     pub fn inspect(&self)->String{
@@ -20,6 +21,7 @@ impl Object{
             Object::Integer(val)=>format!("{}",val),
             Object::Boolean(val)=>format!("{}",val),
             Object::Null=>format!("null"),
+            Object::Unkown=>format!("unkown"),
         }
     }
 }

@@ -1,7 +1,7 @@
 use std::any::{Any, TypeId};
 
 use crate::{
-    ast::{Boolean, ExpressionStatement, InfixExpression, IntegerLiteral, PrefixExpression, Program, Statement},
+    ast::{BlockStatement, Boolean, ExpressionStatement, IfExpression, InfixExpression, IntegerLiteral, Node, PrefixExpression, Program, Statement},
     object::Object,
 };
 
@@ -41,8 +41,15 @@ pub fn eval(node: &dyn Any) -> Object {
         let right = eval(x.right.as_ref().unwrap().as_any());
         let left = eval(x.left.as_ref().unwrap().as_any());
         eval_infix_expression(&infix_exp.unwrap().operator,left,right)
-    }else {
-        NULL
+    } else if (&*node).type_id() == TypeId::of::<BlockStatement>(){
+        let statement = node.downcast_ref::<BlockStatement>();
+        let x = statement.unwrap();
+        evaluate_statements(x.statements.iter().map(|y|y).collect())
+    } else if (&*node).type_id() == TypeId::of::<IfExpression>(){
+        let if_exp = node.downcast_ref::<IfExpression>();
+        eval_if_expression(if_exp.unwrap())
+    } else {
+        Object::Unkown
     };
 
     ret
@@ -111,8 +118,28 @@ fn eval_integer_infix_expression(operator:&str,left:i64,right:i64)->Object{
         _=>NULL
     }
 }
+fn eval_if_expression(ie:&IfExpression)->Object{
+    let condition = eval(ie.condition.as_ref().unwrap().as_any());
+    if is_truthy(condition){
+        eval(ie.consequence.as_ref().unwrap().as_any())
+    } else if ie.alternative.is_some(){
+        eval(ie.alternative.as_ref().unwrap().as_any())
+    } else {
+        NULL
+    }
+}
+fn is_truthy(obj:Object)->bool{
+    match obj{
+        NULL=>false,
+        TRUE=>true,
+        FALSE=>false,
+        _=>true
+    }
+}
 #[cfg(test)]
 mod tests {
+    use std::any::Any;
+
     use crate::{ast::Node, lexer::Lexer, object::Object, parser::Parser};
 
     use super::eval;
@@ -144,16 +171,16 @@ mod tests {
     #[test]
     fn test_eval_boolean_expression(){
         let tests:Vec<(&str,bool)> = vec![
-            // ("true",true),
-            // ("false",false),
-            // ("1 < 2", true),
-            // ("1 > 2", false),
-            // ("1 < 1", false),
-            // ("1 > 1", false),
-            // ("1 == 1", true),
-            // ("1 != 1", false),
-            // ("1 == 2", false),
-            // ("1 != 2", true),
+            ("true",true),
+            ("false",false),
+            ("1 < 2", true),
+            ("1 > 2", false),
+            ("1 < 1", false),
+            ("1 > 1", false),
+            ("1 == 1", true),
+            ("1 != 1", false),
+            ("1 == 2", false),
+            ("1 != 2", true),
             ("true == true", true),
             ("false == false", true),
             ("true == false", false),
@@ -176,6 +203,28 @@ mod tests {
         for tt in tests{
             let evaluated = test_eval(tt.0);
             test_boolean_object(evaluated, tt.1);
+        }
+    }
+    #[test]
+    fn test_if_else_expression(){
+        let tests : Vec<(&str,Box<dyn Any>)> = vec![
+            ("if (true) { 10 }", Box::new(10_i64)),
+            ("if (false) { 10 }", Box::new(Object::Null)),
+            ("if (1) { 10 }", Box::new(10_i64)),
+            ("if (1 < 2) { 10 }", Box::new(10)),
+            ("if (1 > 2) { 10 }", Box::new(Object::Null)),
+            ("if (1 > 2) { 10 } else { 20 }", Box::new(20_i64)),
+            ("if (1 < 2) { 10 } else { 20 }", Box::new(10_i64)),
+        ];
+
+        for tt in tests{
+            let evaluated = test_eval(tt.0);
+            let integer = tt.1.downcast::<i64>();
+            if integer.is_err(){
+                test_null_object(evaluated);
+            }else{
+                test_integer_object(evaluated, *integer.unwrap());
+            }
         }
     }
 
@@ -222,6 +271,13 @@ mod tests {
                 expected
             );
             return false;
+        }
+        true
+    }
+
+    fn test_null_object(obj:Object)->bool{
+        if Object::Null!=obj{
+            println!("object is not null. got={:?}",obj);
         }
         true
     }
