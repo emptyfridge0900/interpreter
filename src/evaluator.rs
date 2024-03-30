@@ -1,7 +1,7 @@
 use std::any::{Any, TypeId};
 
 use crate::{
-    ast::{BlockStatement, Boolean, ExpressionStatement, IfExpression, InfixExpression, IntegerLiteral, Node, PrefixExpression, Program, Statement},
+    ast::{BlockStatement, Boolean, ExpressionStatement, IfExpression, InfixExpression, IntegerLiteral, Node, PrefixExpression, Program, ReturnStatement, Statement},
     object::Object,
 };
 
@@ -13,13 +13,11 @@ pub fn eval(node: &dyn Any) -> Object {
     let ret = 
     if (&*node).type_id() == TypeId::of::<Program>(){
         let program = node.downcast_ref::<Program>();
-        let binding = program.unwrap().statements.borrow();
-        let brow = binding.iter().map(|x|x).collect();
-        evaluate_statements(brow)
+        eval_program(program.unwrap())
     } else if (&*node).type_id() == TypeId::of::<ExpressionStatement>(){
         let exp_stmt = node.downcast_ref::<ExpressionStatement>();
         eval(exp_stmt.unwrap().expression.as_ref().unwrap().as_any())
-        
+
     } else if (&*node).type_id() == TypeId::of::<IntegerLiteral>() {
         let integer_literal = node.downcast_ref::<IntegerLiteral>();
         let ret = integer_literal.unwrap().integer_value;
@@ -44,24 +42,49 @@ pub fn eval(node: &dyn Any) -> Object {
     } else if (&*node).type_id() == TypeId::of::<BlockStatement>(){
         let statement = node.downcast_ref::<BlockStatement>();
         let x = statement.unwrap();
-        evaluate_statements(x.statements.iter().map(|y|y).collect())
+        //eval_statements(x.statements.iter().map(|y|y).collect())
+        eval_block_statement(x)
     } else if (&*node).type_id() == TypeId::of::<IfExpression>(){
         let if_exp = node.downcast_ref::<IfExpression>();
         eval_if_expression(if_exp.unwrap())
-    } else {
+    } else if (&*node).type_id() == TypeId::of::<ReturnStatement>(){
+        let ret_statement = node.downcast_ref::<ReturnStatement>();
+        let val = eval(ret_statement.unwrap().return_value.as_ref().unwrap().as_any());
+        Object::Return(Box::new(val))
+    }else {
         Object::Unkown
     };
 
     ret
 }
 
-fn evaluate_statements(stmt:Vec<&Box<dyn Statement>>)->Object{
+fn eval_program(program:&Program)->Object{
+    let binding = program.statements.borrow();
+    let stmt:Vec<&Box<dyn Statement>> = binding.iter().map(|x|x).collect();
     let mut result:Object = Object::Null;
     for statement in stmt{
         result = eval(statement.as_any());
+        if let Object::Return(value) = result{
+            return *value;
+        }
     }
     result
 }
+fn eval_block_statement(block:&BlockStatement)->Object{
+    let mut result:Object = Object::Null;
+    for statement in &block.statements{
+        result = eval(statement.as_any());
+        if result.get_type() == "RETURN_VALUE"{
+            return result;
+        }
+        if let Object::Return(value)=result{
+            return *value
+        }
+    }
+    NULL
+
+}
+
 fn native_boolean_to_boolean_object(input:bool)->Object{
     if input{
         return TRUE;
@@ -225,6 +248,19 @@ mod tests {
             }else{
                 test_integer_object(evaluated, *integer.unwrap());
             }
+        }
+    }
+    #[test]
+    fn test_return_statements(){
+        let tests:Vec<(&str,i64)> = vec![
+            ("return 10;", 10_i64),
+            ("return 10; 9;", 10_i64),
+            ("return 2 * 5; 9;", 10_i64),
+            ("9; return 2 * 5; 9;", 10_i64),
+        ];
+        for tt in tests{
+            let evaluated = test_eval(tt.0);
+            test_integer_object(evaluated, tt.1);
         }
     }
 
