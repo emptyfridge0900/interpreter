@@ -1,22 +1,21 @@
 use std::any::{Any, TypeId};
 
 use crate::{
-    ast::{BlockStatement, Boolean, ExpressionStatement, IfExpression, InfixExpression, IntegerLiteral, Node, PrefixExpression, Program, ReturnStatement, Statement},
-    object::Object,
+    ast::{BlockStatement, Boolean, ExpressionStatement, Identifier, IfExpression, InfixExpression, IntegerLiteral, LetStatement, Node, PrefixExpression, Program, ReturnStatement, Statement}, environment::Environment, object::Object
 };
 
 const TRUE: Object= Object::Boolean(true);
 const FALSE: Object= Object::Boolean(false);
 const NULL:Object = Object::Null;
 
-pub fn eval(node: &dyn Any) -> Object {
+pub fn eval(node: &dyn Any,env:&mut Environment) -> Object {
     let ret = 
     if (&*node).type_id() == TypeId::of::<Program>(){
         let program = node.downcast_ref::<Program>();
-        eval_program(program.unwrap())
+        eval_program(program.unwrap(),env)
     } else if (&*node).type_id() == TypeId::of::<ExpressionStatement>(){
         let exp_stmt = node.downcast_ref::<ExpressionStatement>();
-        eval(exp_stmt.unwrap().expression.as_ref().unwrap().as_any())
+        eval(exp_stmt.unwrap().expression.as_ref().unwrap().as_any(),env)
 
     } else if (&*node).type_id() == TypeId::of::<IntegerLiteral>() {
         let integer_literal = node.downcast_ref::<IntegerLiteral>();
@@ -31,51 +30,69 @@ pub fn eval(node: &dyn Any) -> Object {
     } else if (&*node).type_id() == TypeId::of::<PrefixExpression>() {
         let prefix_exp = node.downcast_ref::<PrefixExpression>();
         let x =prefix_exp.unwrap();
-        let right = eval(x.right.as_ref().unwrap().as_any());
+        let right = eval(x.right.as_ref().unwrap().as_any(),env);
         if is_error(right.clone()){
             return right;
         }
         eval_prefix_expression(&prefix_exp.unwrap().operator,right)
+
     } else if (&*node).type_id() == TypeId::of::<InfixExpression>(){
         let infix_exp = node.downcast_ref::<InfixExpression>();
         let x =infix_exp.unwrap();
-        let left = eval(x.left.as_ref().unwrap().as_any());
+        let left = eval(x.left.as_ref().unwrap().as_any(),env);
         if is_error(left.clone()){
             return left;
         }
-        let right = eval(x.right.as_ref().unwrap().as_any());
+        let right = eval(x.right.as_ref().unwrap().as_any(),env);
         if is_error(right.clone()){
             return right;
         }
         eval_infix_expression(&infix_exp.unwrap().operator,left,right)
+
     } else if (&*node).type_id() == TypeId::of::<BlockStatement>(){
         let statement = node.downcast_ref::<BlockStatement>();
         let x = statement.unwrap();
         //eval_statements(x.statements.iter().map(|y|y).collect())
-        eval_block_statement(x)
+        
+        eval_block_statement(x,env)
     } else if (&*node).type_id() == TypeId::of::<IfExpression>(){
         let if_exp = node.downcast_ref::<IfExpression>();
-        eval_if_expression(if_exp.unwrap())
+        eval_if_expression(if_exp.unwrap(),env)
+
     } else if (&*node).type_id() == TypeId::of::<ReturnStatement>(){
         let ret_statement = node.downcast_ref::<ReturnStatement>();
-        let val = eval(ret_statement.unwrap().return_value.as_ref().unwrap().as_any());
+        let val = eval(ret_statement.unwrap().return_value.as_ref().unwrap().as_any(),env);
         if is_error(val.clone()){
             return val;
         }
         Object::Return(Box::new(val))
-    }else {
+
+    } else if (&*node).type_id() == TypeId::of::<LetStatement>(){
+        let let_statement = node.downcast_ref::<LetStatement>();
+        let let_statement = let_statement.unwrap();
+        let val = eval(let_statement.value.as_ref().unwrap().as_any(),env);
+        if is_error(val.clone()){
+            return val;
+        }
+        env.set(let_statement.name.token_value.clone(), val)
+
+    } else if (&*node).type_id() == TypeId::of::<Identifier>(){
+        let identifier = node.downcast_ref::<Identifier>();
+        let identifier = identifier.unwrap();
+        eval_identifier(identifier, env)
+    } else {
         Object::Unknown
     };
 
     ret
 }
 
-fn eval_program(program:&Program)->Object{
+fn eval_program(program:&Program,env:&mut Environment)->Object{
     let binding = program.statements.borrow();
     let stmt:Vec<&Box<dyn Statement>> = binding.iter().map(|x|x).collect();
     let mut result:Object = Object::Null;
     for statement in stmt{
-        result = eval(statement.as_any());
+        result = eval(statement.as_any(),env);
         // if let Object::Return(value) = result{
         //     return *value;
         // }
@@ -87,10 +104,10 @@ fn eval_program(program:&Program)->Object{
     }
     result
 }
-fn eval_block_statement(block:&BlockStatement)->Object{
+fn eval_block_statement(block:&BlockStatement,env:&mut Environment)->Object{
     let mut result:Object = Object::Null;
     for statement in &block.statements{
-        result = eval(statement.as_any());
+        result = eval(statement.as_any(),env);
 
         match result{
             Object::Return(val)=>return Object::Return(val),
@@ -131,6 +148,13 @@ fn eval_infix_expression(operator:&str,left:Object,right:Object)->Object{
     //     _=>NULL
     // }
 }
+fn eval_identifier(node:&Identifier,env:&Environment)->Object{
+    let val = env.get(node.token_value.clone());
+    if val.is_none(){
+        println!("identifier not found: {}",node.token_value.clone());
+    }
+    val.unwrap()
+}
 fn eval_bang_operator_expression(right:Object)->Object{
     match right{
         TRUE=>FALSE,
@@ -160,15 +184,15 @@ fn eval_integer_infix_expression(operator:&str,left:i64,right:i64)->Object{
         _=>new_error(format!("unknown operator: {} {} {}",left, operator, right))
     }
 }
-fn eval_if_expression(ie:&IfExpression)->Object{
-    let condition = eval(ie.condition.as_ref().unwrap().as_any());
+fn eval_if_expression(ie:&IfExpression,env:&mut Environment)->Object{
+    let condition = eval(ie.condition.as_ref().unwrap().as_any(),env);
     if is_error(condition.clone()){
         return condition;
     }
     if is_truthy(condition){
-        eval(ie.consequence.as_ref().unwrap().as_any())
+        eval(ie.consequence.as_ref().unwrap().as_any(),env)
     } else if ie.alternative.is_some(){
-        eval(ie.alternative.as_ref().unwrap().as_any())
+        eval(ie.alternative.as_ref().unwrap().as_any(),env)
     } else {
         NULL
     }
@@ -194,7 +218,7 @@ fn is_error(obj:Object)->bool{
 mod tests {
     use std::any::Any;
 
-    use crate::{ast::Node, lexer::Lexer, object::Object, parser::Parser};
+    use crate::{ast::Node, environment::Environment, lexer::Lexer, object::Object, parser::Parser};
 
     use super::eval;
 
@@ -332,6 +356,10 @@ return 1;
 ",
 "unknown operator: BOOLEAN + BOOLEAN",
             ),
+            (
+                "foobar",
+                "identifier not found: foobar",
+            )
         ];
         for tt in tests{
             let evaluated =  test_eval(tt.0);
@@ -344,16 +372,26 @@ return 1;
             }
             println!("no error object returned. got={:?}",evaluated);
         }
-
-
+    }
+    #[test]
+    fn test_let_statement(){
+        let tests:Vec<(&str,i64)> = vec![
+            ("let a = 5; a;", 5),
+            ("let a = 5 * 5; a;", 25),
+            ("let a = 5; let b = a; b;", 5),
+            ("let a = 5; let b = a; let c = a + b + 5; c;", 15),
+        ]; 
+        for tt in tests{
+            test_integer_object(test_eval(tt.0), tt.1);
+        }
     }
 
     fn test_eval(input: &str) -> Object {
         let l = Lexer::new(input);
         let mut p = Parser::new(l);
         let program = p.parse_program();
-
-        eval(program.as_any())
+        let mut env=Environment::new();
+        eval(program.as_any(),&mut env)
     }
     fn test_integer_object(obj: Object, expected: i64) -> bool {
         let result = match obj {

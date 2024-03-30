@@ -5,10 +5,5 @@ pub mod lexer;
 pub mod repl;
 pub mod object;
 pub mod evaluator;
-use token::{Token,TokenType};
+pub mod environment;
 
-#[cfg(test)]
-mod tests {
-
-
-}
