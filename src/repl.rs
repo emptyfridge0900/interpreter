@@ -1,6 +1,6 @@
 use std::io::{stdin, stdout, Write};
 
-use crate::{ast::Node, environment::Environment, evaluator::eval, lexer::Lexer, object::Object, parser::Parser};
+use crate::{ ast::Node, environment::Environment, evaluator::eval, lexer::Lexer, object::Object, parser::Parser};
 
 pub fn start(){
     let mut env = Environment::new();
@@ -18,7 +18,7 @@ pub fn start(){
             continue;
         }
         println!("{}",program.string());
-        let evaludated = eval(program.as_any(),&mut env);
+        let evaludated = eval(&Node::Program(program),&mut env);
         if evaludated != Object::Null{
            println!("{}",evaludated.inspect()); 
         }
