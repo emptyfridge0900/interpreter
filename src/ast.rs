@@ -88,13 +88,13 @@ pub enum Expression{
     },
     FunctionLiteral{
         token:Token,
-        parameters:Vec<Rc<Expression>>,//identifier
+        parameters:Vec<Identifier>,//identifier
         body:Rc<Statement>
     },
     Call{
         token:Token,
         function:Rc<Expression>,
-        arguments:Vec<Rc<Expression>>
+        arguments:Vec<Expression>
     },
     Error
 }

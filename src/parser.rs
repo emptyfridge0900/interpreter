@@ -324,7 +324,7 @@ impl Parser {
         if body.is_none(){
             return Expression::Error
         }
-        Expression::FunctionLiteral { token: cur_token, parameters: parameters.iter().map(|x|Rc::new(Expression::Identifier(x.clone()))).collect(), body: body.unwrap().into() }
+        Expression::FunctionLiteral { token: cur_token, parameters: parameters, body: body.unwrap().into() }
     }
 
     fn parse_function_parameters(&mut self) -> Vec<Identifier> {
@@ -356,7 +356,7 @@ impl Parser {
         Expression::Call{
             token:self.cur_token.clone(),
             function: function.into(), 
-            arguments:self.parse_call_arguments().iter().map(|x|Rc::new(x.clone())).collect()
+            arguments:self.parse_call_arguments().iter().map(|x|x.clone()).collect()
         }
     }
     fn parse_call_arguments(&mut self)->Vec<Expression>{
@@ -825,8 +825,8 @@ mod tests {
 
                 let par1 = parameters[0].clone();
                 let par2 = parameters[1].clone();
-                test_literal_expression(&par1, Box::new("x"));
-                test_literal_expression(&par2, Box::new("y"));
+                test_literal_expression(&Expression::Identifier(par1), Box::new("x"));
+                test_literal_expression(&Expression::Identifier(par2), Box::new("y"));
 
                 if let Statement::Block { token, statements } = &*body{
                     if statements.len()!=1{
@@ -879,7 +879,7 @@ mod tests {
                     }
                     
                     for (i,ident) in tt.1.into_iter().enumerate(){
-                        test_literal_expression(&parameters[i], Box::new(ident));
+                        test_literal_expression(&&Expression::Identifier(parameters[i].clone()), Box::new(ident));
                     }
                 }else{
 

@@ -1,7 +1,7 @@
 use std::any::{Any, TypeId};
 
 use crate::{
-    ast::{Expression, Identifier, Node, Program, Statement}, environment::Environment, object::Object
+    ast::{Expression, Identifier, Node, Program, Statement}, environment::{new_enclosed_environment, Environment}, object::Object
 };
 
 const TRUE: Object= Object::Boolean(true);
@@ -53,8 +53,20 @@ fn eval_expression(expression:&Expression,env:&mut Environment)->Object{
         Expression::Prefix { token, operator, right }=> eval_prefix_expression(&operator, eval(&Node::Expression(right.clone()),env)),
         Expression::Infix { token, left, operator, right }=>eval_infix_expression(&operator, eval(&Node::Expression(left.clone()),env), eval(&Node::Expression(right.clone()),env)),
         Expression::If { condition, consequence, alternative }=>eval_if_expression(&expression, env),
-        Expression::FunctionLiteral { token, parameters, body }=>Object::Null,
-        Expression::Call { token, function, arguments }=>Object::Null,
+        Expression::FunctionLiteral { token, parameters, body }=>{
+            Object::Function { parameters: parameters.to_vec(), body: body.as_ref().clone(), env:env.clone() }
+        },
+        Expression::Call { token, function, arguments }=>{
+            let func = eval_expression(function,env);
+            if is_error(func.clone()){
+                return func;
+            }
+            let args = eval_expressions(arguments, env);
+            if args.len() ==1 && is_error(args[0].clone()){
+                return args[0].clone();
+            }
+            apply_function(func,args)
+        },
         Expression::Error=>Object::Null
     }
 }
@@ -73,6 +85,39 @@ fn eval_block_statement(block:&Statement,env:&mut Environment)->Object{
         }
     }
     result
+}
+fn eval_expressions(exps:&Vec<Expression>,env:&mut Environment)->Vec<Object>{
+    let mut result:Vec<Object> = vec![];
+    for e in exps{
+        let evaluated=  eval_expression(e,env);
+        if is_error(evaluated.clone()){
+            return vec![evaluated];
+        }
+        result.push(evaluated);
+    }
+    result
+}
+
+fn apply_function(func:Object, args:Vec<Object>)->Object{
+    if let Object::Function { parameters, body, env } =func{
+        let mut extended_env= extend_function_env(parameters, env, args);
+        let evaluated=eval(&Node::Statement(body),&mut extended_env);
+        return unwrap_return_value(evaluated);
+    }
+    new_error("format".to_owned())
+}
+fn extend_function_env(parameters:Vec<Identifier>,env:Environment,args:Vec<Object>)->Environment{
+    let mut env = new_enclosed_environment(env);
+    for (i,param) in parameters.iter().enumerate(){
+        env.set(param.name.clone(), args[i].clone());
+    }
+    env
+}
+fn unwrap_return_value(obj:Object)->Object{
+    if let Object::Return(val)=obj{
+        return *val
+    }
+    obj
 }
 
 fn native_boolean_to_boolean_object(input:bool)->Object{
@@ -178,6 +223,7 @@ fn is_error(obj:Object)->bool{
 }
 #[cfg(test)]
 mod tests {
+    use core::panic;
     use std::any::Any;
 
     use crate::{ast::Node, environment::Environment, lexer::Lexer, object::Object, parser::Parser};
@@ -343,6 +389,40 @@ return 1;
             ("let a = 5; let b = a; b;", 5),
             ("let a = 5; let b = a; let c = a + b + 5; c;", 15),
         ]; 
+        for tt in tests{
+            test_integer_object(test_eval(tt.0), tt.1);
+        }
+    }
+    #[test]
+    fn test_function_object(){
+        let input = "fn(x) { x + 2; };";
+        let evaluated = test_eval(input);
+        if let Object::Function { parameters, body, env }=evaluated{
+            if parameters.len()!=1{
+                panic!("function has wrong parameters");
+            }
+            if parameters[0].string() != "x"{
+                panic!("parameter is not 'x'. got={}",parameters[0].string());
+            }
+            let expect= "(x + 2)";
+            if body.string() != expect{
+                panic!("body is not {}. got={}",expect,body.string());
+            }
+        }else{
+            panic!("object is not Function. got {:?}",evaluated);
+        }
+    }
+    #[test]
+    fn test_function_application(){
+        let tests:Vec<(&str,i64)> = vec![
+            ("let identity = fn(x) { x; }; identity(5);", 5),
+            ("let identity = fn(x) { return x; }; identity(5);", 5),
+            ("let double = fn(x) { x * 2; }; double(5);", 10),
+            ("let add = fn(x, y) { x + y; }; add(5, 5);", 10),
+            ("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20),
+            ("fn(x) { x; }(5)", 5),
+        ];
+
         for tt in tests{
             test_integer_object(test_eval(tt.0), tt.1);
         }

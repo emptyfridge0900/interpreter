@@ -1,3 +1,7 @@
+use std::rc::Rc;
+
+use crate::{ast::{Identifier, Statement}, environment::Environment};
+
 
 #[derive(PartialEq,Eq,Clone,Debug)]
 pub enum Object{
@@ -5,6 +9,7 @@ pub enum Object{
     Boolean(bool),
     Null,
     Return(Box<Object>),
+    Function{parameters:Vec<Identifier>,body:Statement,env:Environment},
     Error(String),
     Unknown
 }
@@ -16,6 +21,7 @@ impl Object{
             Object::Boolean(..)=>"BOOLEAN",
             Object::Null=>"NULL",
             Object::Return(..)=>"RETURN_VALUE",
+            Object::Function{..}=>"FUNCTION",
             Object::Error(..)=>"ERROR",
             Object::Unknown=>"UNKNOWN",
         }
@@ -24,6 +30,9 @@ impl Object{
         match self{
             Object::Integer(val)=>format!("{}",val),
             Object::Boolean(val)=>format!("{}",val),
+            Object::Function { parameters, body, env }=>{
+                format!("fn({}){{\n{}\n}}",parameters.iter().map(|x|x.string()).collect::<Vec<String>>().join(", "),body.string())
+            },
             Object::Null=>format!("null"),
             Object::Return(val)=>format!("{}",val.inspect()),
             Object::Error(msg)=>format!("ERROR: {}",msg),
