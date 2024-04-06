@@ -50,10 +50,26 @@ impl Lexer {
             .unwrap()
     }
 
+    pub fn read_string(&mut self)->String{
+        let position = self.position+1;
+        loop{
+            self.read_char();
+            if self.ch == b'"' || self.ch == 0{
+                break
+            }
+        }
+        from_utf8(&self.input[position..self.position])
+            .unwrap()
+            .to_string()
+    }
+
     pub fn next_token(&mut self) -> Token {
         let tok: token::Token;
         self.skip_whitespace();
         match self.ch {
+            b'"'=>{
+                tok=Token::STRING(self.read_string())
+            },
             b'=' => {
                 tok = {
                     if self.peek_char() == b'=' {
@@ -159,7 +175,7 @@ mod tests {
 
     #[test]
     fn test_next_token() {
-        let input = "let five = 5;
+        let input = r#"let five = 5;
 let ten = 10;
 let add = fn(x, y) {
     x + y;
@@ -176,7 +192,9 @@ if (5 < 10) {
 
 10 == 10;
 10 != 9;
-";
+"foobar"
+"foo bar"
+"#;
 
         let tests: Vec<Token> = vec![
             Token::LET,
@@ -252,6 +270,8 @@ if (5 < 10) {
             Token::NOT_EQ,
             Token::INT(9),
             Token::SEMICOLON,
+            Token::STRING("foobar".to_string()),
+            Token::STRING("foo bar".to_string()),
             Token::EOF,
         ];
         let mut l = Lexer::new(input);
@@ -265,4 +285,6 @@ if (5 < 10) {
             }
         }
     }
+
+
 }

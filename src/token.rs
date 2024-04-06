@@ -12,6 +12,7 @@ pub enum Token {
     // Identifiers + literals
     IDENT(String), // add, foobar, x, y, ...
     INT(i64),   // 1343456
+    STRING(String),
 
     // Operators
     ASSIGN,
@@ -49,6 +50,7 @@ impl Token{
         match self{
             Token::IDENT(i)=>"ident".to_owned(),
             Token::INT(i)=>"int".to_owned(),
+            Token::STRING(i)=>"string".to_owned(),
             _=>self.to_string().to_lowercase()
         }
     }
@@ -56,6 +58,7 @@ impl Token{
         match self{
             Token::IDENT(i)=>i.to_owned(),
             Token::INT(i)=>i.to_string(),
+            Token::STRING(i)=>i.to_string(),
             _=>self.to_string().to_lowercase()
         }
     }
@@ -77,8 +80,9 @@ impl Token{
 impl fmt::Display for Token{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self{
-            Token::IDENT(x)=>write!(f, "{}", x) ,
-            Token::INT(x)=>write!(f, "{}", x),
+            Token::IDENT(x)=>write!(f, "{x}") ,
+            Token::INT(x)=>write!(f, "{x}"),
+            Token::STRING(x)=>write!(f,"{x}"),
             Token::ILLEGAL=>write!(f,"ILLEGAL"),
             Token::EOF=>write!(f,"EOF"),
             Token::ASSIGN=>write!(f,"="),

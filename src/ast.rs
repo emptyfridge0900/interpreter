@@ -96,6 +96,10 @@ pub enum Expression{
         function:Rc<Expression>,
         arguments:Vec<Expression>
     },
+    StringLiteral{
+        token:Token,
+        value:String
+    },
     Error
 }
 impl Expression{
@@ -103,6 +107,7 @@ impl Expression{
         match self{
             Expression::Identifier(ident)=>ident.string(),
             Expression::IntegerLiteral { value }=>value.to_string(),
+            Expression::StringLiteral { token, value }=>token.token_value(),
             Expression::Boolean {  value }=>value.to_string(),
             Expression::Prefix { token, operator, right }=>format!("({}{})",operator,right.string()),
             Expression::Infix { token, left, operator, right }=>format!("({} {} {})",left.string(),operator,right.string()),

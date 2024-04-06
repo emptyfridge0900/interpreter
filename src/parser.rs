@@ -50,6 +50,7 @@ impl Parser {
 
         p.register_prefix("ident".to_owned(), Parser::parse_identifier);
         p.register_prefix("int".to_owned(), Parser::parse_integer_literal);
+        p.register_prefix("string".to_string(), Parser::parse_string_literal);
         p.register_prefix(Token::BANG.token_type(), Parser::parse_prefix_expression);
         p.register_prefix(Token::MINUS.token_type(), Parser::parse_prefix_expression);
 
@@ -72,6 +73,7 @@ impl Parser {
         p.register_prefix(Token::FUNCTION.token_type(),Parser::parse_functional_literal);
 
         p.register_infix(Token::LPAREN.token_type(), Parser::parse_call_expression);
+
         p
     }
     pub fn register_prefix(&mut self, token_type: String, func: PrefixParseFn) {
@@ -377,6 +379,9 @@ impl Parser {
         }
         args
     }
+    fn parse_string_literal(&mut self)->Expression{
+        Expression::StringLiteral { token: self.cur_token.clone(), value: self.cur_token.token_value() }
+    }
 
     fn cur_toekn_is(&self, t: token::Token) -> bool {
         self.cur_token == t
@@ -431,6 +436,7 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
+    use core::panic;
     use std::{any::{Any, TypeId}, rc::Rc};
 
     use crate::{
@@ -923,6 +929,27 @@ mod tests {
             panic!("program.statement[0] is not ExpresstionStatement.");
         }
         
+    }
+
+    #[test]
+    fn test_string_literal_expression(){
+        let input = r#""hello world";"#;
+        let l = Lexer::new(input);
+        let mut p = Parser::new(l);
+        let program = p.parse_program();
+        check_parser_errors(&p);
+
+        if let Statement::Expression { token, expression }= program.statements[0].clone(){
+            if let Expression::StringLiteral { token, value }=expression{
+                if value !="hello world"{
+                    println!("literal value not hello world. got={}",value);
+                }
+            }else{
+                panic!("exp not StringLiteral. got={:?}",expression);
+            }
+        }else{
+            panic!("program.statement[0] is not ExpresstionStatement.");
+        }
     }
 
 

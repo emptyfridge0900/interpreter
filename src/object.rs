@@ -10,6 +10,7 @@ pub enum Object{
     Null,
     Return(Box<Object>),
     Function{parameters:Vec<Identifier>,body:Statement,env:Environment},
+    String(String),
     Error(String),
     Unknown
 }
@@ -22,6 +23,7 @@ impl Object{
             Object::Null=>"NULL",
             Object::Return(..)=>"RETURN_VALUE",
             Object::Function{..}=>"FUNCTION",
+            Object::String(..)=>"STRING",
             Object::Error(..)=>"ERROR",
             Object::Unknown=>"UNKNOWN",
         }
@@ -35,6 +37,7 @@ impl Object{
             },
             Object::Null=>format!("null"),
             Object::Return(val)=>format!("{}",val.inspect()),
+            Object::String(s)=>format!("{s}"),
             Object::Error(msg)=>format!("ERROR: {}",msg),
             Object::Unknown=>format!("unknown"),
         }

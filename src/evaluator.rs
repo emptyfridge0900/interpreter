@@ -1,3 +1,4 @@
+use core::panic;
 use std::any::{Any, TypeId};
 
 use crate::{
@@ -67,9 +68,11 @@ fn eval_expression(expression:&Expression,env:&mut Environment)->Object{
             }
             apply_function(func,args)
         },
+        Expression::StringLiteral { token, value }=>Object::String(value.to_string()),
         Expression::Error=>Object::Null
     }
 }
+
 fn eval_block_statement(block:&Statement,env:&mut Environment)->Object{
     let mut result:Object = Object::Null;
     if let Statement::Block { token, statements }=block{
@@ -142,13 +145,33 @@ fn eval_infix_expression(operator:&str,left:Object,right:Object)->Object{
         eval_integer_infix_expression(operator,l,r)
     } else if left.get_type() != right.get_type(){
         new_error(format!("type mismatch: {} {} {}",left.get_type(),operator,right.get_type()))
+    } else if left.get_type() =="STRING".to_owned() && right.get_type() == "STRING".to_owned(){
+        eval_string_infix_expression(operator.to_string(), left,right)
     } else {
         new_error(format!("unknown operator: {} {} {}",left.get_type(),operator,right.get_type()))
-    }
+    } 
     // match (left,right){
     //     (Object::Integer(l),Object::Integer(r))=>eval_integer_infix_expression(operator,l,r),
     //     _=>NULL
     // }
+}
+fn eval_string_infix_expression(operator:String,left:Object,right:Object)->Object{
+    if operator != "+"{
+        return new_error(format!("unknown operator {} {} {}",left.get_type(),operator.to_string(), right.get_type()));
+    }
+    let mut left_val=if let Object::String(v)=left{
+        v
+    }else{
+        panic!("not a string")
+    };
+    let right_val = if let Object::String(v) = right {
+        v
+    }else{
+        panic!("not a string")
+    };
+    left_val.push_str(&right_val);
+    Object::String(left_val)
+
 }
 fn eval_identifier(node:&Identifier,env:&Environment)->Object{
     let val = env.get(node.name.clone());
@@ -367,6 +390,10 @@ return 1;
             (
                 "foobar",
                 "identifier not found: foobar",
+            ),
+            (
+                r#""Hello" - "World""#,
+                "unknown operator: STRING - STRING"
             )
         ];
         for tt in tests{
@@ -427,6 +454,19 @@ return 1;
             test_integer_object(test_eval(tt.0), tt.1);
         }
     }
+    #[test]
+    fn test_string_concatenation(){
+        let input=r#""Hello"+" "+"World!""#;
+        let evaluated = test_eval(input);
+        if let Object::String(v)=evaluated.clone(){
+            if v != "Hello World!"{
+                println!("string has wrong value. got={}",v);
+            }
+        }else{
+            panic!("object is not String. got={:?}",evaluated);
+        }
+    }
+
 
     fn test_eval(input: &str) -> Object {
         let l = Lexer::new(input);
