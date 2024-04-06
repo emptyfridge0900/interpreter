@@ -2,7 +2,7 @@ use core::panic;
 use std::any::{Any, TypeId};
 
 use crate::{
-    ast::{Expression, Identifier, Node, Program, Statement}, environment::{new_enclosed_environment, Environment}, object::Object
+    ast::{Expression, Identifier, Node, Program, Statement}, builtin::Builtins, environment::{new_enclosed_environment, Environment}, object::Object
 };
 
 const TRUE: Object= Object::Boolean(true);
@@ -102,12 +102,16 @@ fn eval_expressions(exps:&Vec<Expression>,env:&mut Environment)->Vec<Object>{
 }
 
 fn apply_function(func:Object, args:Vec<Object>)->Object{
-    if let Object::Function { parameters, body, env } =func{
-        let mut extended_env= extend_function_env(parameters, env, args);
-        let evaluated=eval(&Node::Statement(body),&mut extended_env);
-        return unwrap_return_value(evaluated);
+    match func{
+        Object::Function { parameters, body, env }=>{
+            let mut extended_env= extend_function_env(parameters, env, args);
+            let evaluated=eval(&Node::Statement(body),&mut extended_env);
+            unwrap_return_value(evaluated)
+        },
+        Object::Builtin(fnunction)=> fnunction(args),
+        _=> new_error("format".to_owned())
     }
-    new_error("format".to_owned())
+    
 }
 fn extend_function_env(parameters:Vec<Identifier>,env:Environment,args:Vec<Object>)->Environment{
     let mut env = new_enclosed_environment(env);
@@ -157,7 +161,7 @@ fn eval_infix_expression(operator:&str,left:Object,right:Object)->Object{
 }
 fn eval_string_infix_expression(operator:String,left:Object,right:Object)->Object{
     if operator != "+"{
-        return new_error(format!("unknown operator {} {} {}",left.get_type(),operator.to_string(), right.get_type()));
+        return new_error(format!("unknown operator: {} {} {}",left.get_type(),operator.to_string(), right.get_type()));
     }
     let mut left_val=if let Object::String(v)=left{
         v
@@ -175,10 +179,14 @@ fn eval_string_infix_expression(operator:String,left:Object,right:Object)->Objec
 }
 fn eval_identifier(node:&Identifier,env:&Environment)->Object{
     let val = env.get(node.name.clone());
-    if val.is_none(){
-        return new_error(format!("identifier not found: {}",node.name));
+    if val.is_some(){
+        return val.unwrap();
     }
-    val.unwrap()
+    let builtin = Builtins::new();
+    if let Object::Builtin(b)= builtin.get(node.name.to_string()){
+        return Object::Builtin(b);
+    }
+    return new_error(format!("identifier not found: {}",node.name));
 }
 fn eval_bang_operator_expression(right:Object)->Object{
     match right{
@@ -235,7 +243,7 @@ fn is_truthy(obj:Object)->bool{
         _=>true
     }
 }
-fn new_error(format:String)->Object{
+pub fn new_error(format:String)->Object{
     Object::Error(format)
 }
 fn is_error(obj:Object)->bool{
@@ -465,6 +473,38 @@ return 1;
         }else{
             panic!("object is not String. got={:?}",evaluated);
         }
+    }
+
+    #[test]
+    fn test_builtin_functions(){
+        let test:Vec<(&str,Object)> = vec![
+            (r#"len("")"#, Object::Integer(0)),
+            (r#"len("four")"#, Object::Integer(4)),
+            (r#"len("hello world")"#, Object::Integer(11)),
+            (r#"len(1)"#, Object::String("argument to `len` not supported, got INTEGER".to_string())),
+            (r#"len("one", "two")"#, Object::String("wrong number of arguments. got=2, want=1".to_string()))
+        ];
+
+        for tt in test{
+            let evaluated = test_eval(tt.0);
+            match tt.1{
+                Object::Integer(v)=> {
+                    test_integer_object(evaluated, v);
+                },
+                Object::String(v)=>{
+                    if let Object::Error(e)=evaluated{
+                        if v!=e{
+                            println!("wrong error message. expected={}, got={}",v,e);
+                        }
+                    }else{
+                        println!("object is not Error. got={:?}",evaluated);
+                        continue
+                    }
+                },
+                _=>unreachable!()
+            }
+        }
+
     }
 
 

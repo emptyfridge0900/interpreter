@@ -6,4 +6,5 @@ pub mod repl;
 pub mod object;
 pub mod evaluator;
 pub mod environment;
+pub mod builtin;
 

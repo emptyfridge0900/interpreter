@@ -11,6 +11,7 @@ pub enum Object{
     Return(Box<Object>),
     Function{parameters:Vec<Identifier>,body:Statement,env:Environment},
     String(String),
+    Builtin(fn(args:Vec<Object>) -> Object),
     Error(String),
     Unknown
 }
@@ -18,13 +19,14 @@ pub enum Object{
 impl Object{
     pub fn get_type(&self)->&str{
         match self{
-            Object::Integer(..)=>"INTEGER",
-            Object::Boolean(..)=>"BOOLEAN",
+            Object::Integer(_)=>"INTEGER",
+            Object::Boolean(_)=>"BOOLEAN",
             Object::Null=>"NULL",
-            Object::Return(..)=>"RETURN_VALUE",
+            Object::Return(_)=>"RETURN_VALUE",
             Object::Function{..}=>"FUNCTION",
-            Object::String(..)=>"STRING",
-            Object::Error(..)=>"ERROR",
+            Object::String(_)=>"STRING",
+            Object::Builtin(_)=>"BUILTIN",
+            Object::Error(_)=>"ERROR",
             Object::Unknown=>"UNKNOWN",
         }
     }
@@ -38,6 +40,7 @@ impl Object{
             Object::Null=>format!("null"),
             Object::Return(val)=>format!("{}",val.inspect()),
             Object::String(s)=>format!("{s}"),
+            Object::Builtin(f)=>format!("builtin function"),
             Object::Error(msg)=>format!("ERROR: {}",msg),
             Object::Unknown=>format!("unknown"),
         }
