@@ -17,6 +17,7 @@ pub enum Precedences {
     PRODUCT,     // *
     PREFIX,      // -X or !X
     CALL,        // myFunction(X)
+    INDEX,
 }
 
 type PrefixParseFn = fn(&mut Parser) -> Expression;
@@ -53,6 +54,12 @@ impl Parser {
         p.register_prefix("string".to_string(), Parser::parse_string_literal);
         p.register_prefix(Token::BANG.token_type(), Parser::parse_prefix_expression);
         p.register_prefix(Token::MINUS.token_type(), Parser::parse_prefix_expression);
+        p.register_prefix(Token::TRUE.token_type(), Parser::parse_boolean);
+        p.register_prefix(Token::FALSE.token_type(), Parser::parse_boolean);
+        p.register_prefix(Token::LPAREN.token_type(), Parser::parse_grouped_expression);
+        p.register_prefix(Token::IF.token_type(), Parser::parse_if_expression);
+        p.register_prefix(Token::FUNCTION.token_type(),Parser::parse_functional_literal);
+        p.register_prefix(Token::LBRACKET.token_type(),Parser::parse_array_literal);
 
         p.register_infix(Token::PLUS.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::MINUS.token_type(), Parser::parse_infix_expression);
@@ -62,17 +69,10 @@ impl Parser {
         p.register_infix(Token::NOT_EQ.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::LT.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::GT.token_type(), Parser::parse_infix_expression);
-
-        p.register_prefix(Token::TRUE.token_type(), Parser::parse_boolean);
-        p.register_prefix(Token::FALSE.token_type(), Parser::parse_boolean);
-
-        p.register_prefix(Token::LPAREN.token_type(), Parser::parse_grouped_expression);
-
-        p.register_prefix(Token::IF.token_type(), Parser::parse_if_expression);
-
-        p.register_prefix(Token::FUNCTION.token_type(),Parser::parse_functional_literal);
-
         p.register_infix(Token::LPAREN.token_type(), Parser::parse_call_expression);
+        p.register_infix(Token::LBRACKET.token_type(), Parser::parse_index_expression);
+
+
 
         p
     }
@@ -329,6 +329,28 @@ impl Parser {
         Expression::FunctionLiteral { token: cur_token, parameters: parameters, body: body.unwrap().into() }
     }
 
+    fn parse_array_literal(&mut self)->Expression{
+        Expression::ArrayLiteral { token: self.cur_token.clone(), elements: self.parse_expression_list(Token::RBRACKET) }
+    }
+    fn parse_expression_list(&mut self, token:Token)->Vec<Expression>{
+        let mut list:Vec<Expression> = vec![];
+        if self.peek_token_is(token.clone()){
+            self.next_token();
+            return list;
+        }
+        self.next_token();
+        list.push(self.parse_expression(Precedences::LOWEST));
+        while self.peek_token_is(Token::COMMA){
+            self.next_token();
+            self.next_token();
+            list.push(self.parse_expression(Precedences::LOWEST));
+        }
+        if !self.expect_peek(token){
+            return vec![]
+        }
+        list
+    }
+
     fn parse_function_parameters(&mut self) -> Vec<Identifier> {
         let mut identifiers: Vec<Identifier> = vec![];
 
@@ -358,27 +380,20 @@ impl Parser {
         Expression::Call{
             token:self.cur_token.clone(),
             function: function.into(), 
-            arguments:self.parse_call_arguments().iter().map(|x|x.clone()).collect()
+            arguments:self.parse_expression_list(Token::RPAREN).iter().map(|x|x.clone()).collect()
         }
     }
-    fn parse_call_arguments(&mut self)->Vec<Expression>{
-        let mut args= vec![];
-        if self.peek_token_is(Token::RPAREN){
-            self.next_token();
-            return args;
-        }
+
+    fn parse_index_expression(&mut self, left:Expression)->Expression{
+        let token=self.cur_token.clone();
         self.next_token();
-        args.push(self.parse_expression(Precedences::LOWEST));
-        while self.peek_token_is(Token::COMMA){
-            self.next_token();
-            self.next_token();
-            args.push(self.parse_expression(Precedences::LOWEST));
+        let exp = Expression::Index { left:left.into() , index: self.parse_expression(Precedences::LOWEST).into() };
+        if !self.expect_peek(Token::RBRACKET){
+            return Expression::Error;
         }
-        if !self.expect_peek(Token::RPAREN){
-            return vec![];
-        }
-        args
+        exp
     }
+
     fn parse_string_literal(&mut self)->Expression{
         Expression::StringLiteral { token: self.cur_token.clone(), value: self.cur_token.token_value() }
     }
@@ -690,7 +705,9 @@ mod tests {
             ("!(true == true)", "(!(true == true))"),
             ("a + add(b * c) + d","((a + add((b * c))) + d)"),
             ("add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))","add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"),
-            ("add(a + b + c * d / f + g)","add((((a + b) + ((c * d) / f)) + g))")
+            ("add(a + b + c * d / f + g)","add((((a + b) + ((c * d) / f)) + g))"),
+            ("a * [1, 2, 3, 4][b * c] * d","((a * ([1, 2, 3, 4][(b * c)])) * d)"),
+            ("add(a * b[2], b[1], 2 * [1, 2][1])","add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))"),
         ];
         for tt in tests {
             let l = Lexer::new(tt.0);
@@ -951,6 +968,51 @@ mod tests {
             panic!("program.statement[0] is not ExpresstionStatement.");
         }
     }
+
+    #[test]
+    fn test_parsing_array_literal(){
+        let input = "[1,2*2,3+3]";
+        let l = Lexer::new(input);
+        let mut p = Parser::new(l);
+        let program = p.parse_program();
+        check_parser_errors(&p);
+
+        if let Statement::Expression { token, expression } =&program.statements[0]{
+            if let Expression::ArrayLiteral { token, elements } = expression{
+                if elements.len() !=3{
+                    panic!("elements len() not 3. got={}",elements.len());
+                }
+                test_integer_literal(&elements[0], 1);
+                test_infix_expression(&elements[1], Box::new(2_i64), "*", Box::new(2_i64));
+                test_infix_expression(&elements[2], Box::new(3_i64), "+", Box::new(3_i64));
+            }else{
+                panic!("exp not ArrayLiterl");
+            }
+        }
+    }
+
+    #[test]
+    fn test_parsing_index_expression(){
+        let input = "myArray[1 + 1]";
+        let l = Lexer::new(input);
+        let mut p= Parser::new(l);
+        let program = p.parse_program();
+        check_parser_errors(&p);
+
+        if let Statement::Expression { token, expression } = &program.statements[0]{
+            if let Expression::Index { left, index }= expression{
+                if !test_identifier(&left, "myArray".to_string()){
+                    return;
+                }
+                if !test_infix_expression(&index, Box::new(1), "+", Box::new(1)){
+                    return;
+                }
+            }else{
+                panic!("exp not IndexExpression.");
+            }
+        }
+    }
+
 
 
     fn test_infix_expression(exp: &Expression, left1: Box<dyn Any>, operator1: &str, right1: Box<dyn Any>) -> bool {

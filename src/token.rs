@@ -35,6 +35,8 @@ pub enum Token {
     RPAREN,
     LBRACE,
     RBRACE,
+    LBRACKET,
+    RBRACKET,
 
     // Keywords
     FUNCTION,
@@ -73,6 +75,7 @@ impl Token{
             Token::SLASH=>Precedences::PRODUCT,
             Token::ASTERISK=>Precedences::PRODUCT,
             Token::LPAREN=>Precedences::CALL,
+            Token::LBRACKET=>Precedences::INDEX,
             _=>Precedences::LOWEST
         }
     }
@@ -101,6 +104,8 @@ impl fmt::Display for Token{
             Token::RPAREN=>write!(f,")"),
             Token::LBRACE=>write!(f,"{{"),
             Token::RBRACE=>write!(f,"}}"),
+            Token::LBRACKET=>write!(f,"["),
+            Token::RBRACKET=>write!(f,"]"),
             Token::FUNCTION=>write!(f,"FUNCTION"),
             Token::LET=>write!(f,"LET"),
             Token::TRUE=>write!(f,"TRUE"),

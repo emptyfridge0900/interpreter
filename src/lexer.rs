@@ -106,6 +106,8 @@ impl Lexer {
             b')' => tok = Token::RPAREN,
             b'{' => tok = Token::LBRACE,
             b'}' => tok = Token::RBRACE,
+            b'[' => tok = Token::LBRACKET,
+            b']' => tok = Token::RBRACKET,
             0 => tok = Token::EOF,
             _ => {
                 if Self::is_letter(self.ch) {
@@ -194,6 +196,7 @@ if (5 < 10) {
 10 != 9;
 "foobar"
 "foo bar"
+[1,2];
 "#;
 
         let tests: Vec<Token> = vec![
@@ -272,6 +275,12 @@ if (5 < 10) {
             Token::SEMICOLON,
             Token::STRING("foobar".to_string()),
             Token::STRING("foo bar".to_string()),
+            Token::LBRACKET,
+            Token::INT(1),
+            Token::COMMA,
+            Token::INT(2),
+            Token::RBRACKET,
+            Token::SEMICOLON,
             Token::EOF,
         ];
         let mut l = Lexer::new(input);

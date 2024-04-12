@@ -100,6 +100,14 @@ pub enum Expression{
         token:Token,
         value:String
     },
+    ArrayLiteral{
+        token:Token,
+        elements:Vec<Expression>
+    },
+    Index{
+        left:Rc<Expression>,
+        index:Rc<Expression>
+    },
     Error
 }
 impl Expression{
@@ -123,8 +131,11 @@ impl Expression{
             },
             Expression::FunctionLiteral {token, parameters, body }=>
             format!("{}({}){}",token.token_value(),parameters.iter().map(|x|x.string()).collect::<Vec<String>>().join(", "),body.string()),
+            Expression::ArrayLiteral { token, elements } =>
+            format!("[{}]",elements.iter().map(|x|x.string()).collect::<Vec<String>>().join(", ")),
             Expression::Call { token, function, arguments }=>
             format!("{}({})",function.string(),arguments.iter().map(|x|x.string()).collect::<Vec<String>>().join(", ")),
+            Expression::Index { left, index }=>format!("({}[{}])",left.string(),index.string()),
             Expression::Error=>"".to_owned()
         }
     }

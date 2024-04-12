@@ -69,7 +69,25 @@ fn eval_expression(expression:&Expression,env:&mut Environment)->Object{
             apply_function(func,args)
         },
         Expression::StringLiteral { token, value }=>Object::String(value.to_string()),
-        Expression::Error=>Object::Null
+        Expression::ArrayLiteral { token, elements }=>{
+            let elements = eval_expressions(elements, env);
+            if elements.len() ==1 && is_error(elements[0].clone()){
+
+            }
+            Object::Array(elements.into())
+        },
+        Expression::Index { left, index }=>{
+            let left = eval_expression(left,env);
+            if is_error(left.clone()){
+                return left;
+            }
+            let index = eval_expression(index,env);
+            if is_error(index.clone()){
+                return index;
+            }
+            return eval_index_expression(left,index);
+        },
+        _|Expression::Error=>Object::Null
     }
 }
 
@@ -235,6 +253,27 @@ fn eval_if_expression(ie:&Expression,env:&mut Environment)->Object{
         Object::Error("not if expression".to_owned())
     }
 }
+fn eval_index_expression(left:Object, index:Object)->Object{
+    match (left.clone(),index.clone()){
+        (Object::Array(array),Object::Integer(int))=>eval_array_index_expression(left,index),
+        _=>new_error(format!("index operator not supported {:?}",left))
+    }
+}
+
+fn eval_array_index_expression(array:Object, index:Object)->Object{
+    if let Object::Array(array_object)=array{
+        let max:i64 = (array_object.len()-1).try_into().unwrap();
+        if let Object::Integer(idx)=index{
+            if idx<0 || idx>max{
+                return Object::Null;
+            }else{
+                return array_object[idx as usize].clone();
+            }
+        }
+    }
+    Object::Null
+}
+
 fn is_truthy(obj:Object)->bool{
     match obj{
         NULL=>false,
@@ -505,6 +544,45 @@ return 1;
             }
         }
 
+    }
+
+    #[test]
+    fn test_array_literals(){
+        let input ="[1, 2 * 2, 3 + 3]";
+        let evaluated = test_eval(input);
+        if let Object::Array(x) = evaluated{
+            if x.len()!=3{
+                panic!("array has wrong num of elements. got={}",x.len());
+            }
+            test_integer_object(x[0].clone(), 1_i64);
+            test_integer_object(x[1].clone(), 1_i64);
+            test_integer_object(x[2].clone(), 1_i64);
+        }else{
+            panic!("object is not array.")
+        }
+    }
+    #[test]
+    fn test_array_index_expression(){
+        let tests:Vec<(&str,Object)> = vec![
+            ("[1, 2, 3][0]",Object::Integer(1_i64)),
+            ("[1, 2, 3][1]",Object::Integer(2_i64)),
+            ("[1, 2, 3][2]",Object::Integer(3_i64)),
+            ("let i = 0; [1][i];", Object::Integer(1_i64)),
+            ("[1, 2, 3][1 + 1];", Object::Integer(3_i64)),
+            ("let myArray = [1, 2, 3]; myArray[2];", Object::Integer(3_i64)),
+            ("let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];", Object::Integer(6_i64)),
+            ("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]", Object::Integer(2_i64)),
+            ("[1, 2, 3][3]",Object::Error("".to_string())),
+            ("[1, 2, 3][-1]",Object::Error("".to_string()))
+        ];
+
+        for tt in tests{
+            let evaluated = test_eval(tt.0);
+            match tt.1{
+                Object::Integer(i)=>test_integer_object(evaluated, i),
+                _=>test_null_object(evaluated)
+            };
+        }
     }
 
 

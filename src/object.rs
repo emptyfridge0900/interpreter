@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{fmt::format, rc::Rc};
 
 use crate::{ast::{Identifier, Statement}, environment::Environment};
 
@@ -13,6 +13,7 @@ pub enum Object{
     String(String),
     Builtin(fn(args:Vec<Object>) -> Object),
     Error(String),
+    Array(Box<[Object]>),
     Unknown
 }
 
@@ -26,6 +27,7 @@ impl Object{
             Object::Function{..}=>"FUNCTION",
             Object::String(_)=>"STRING",
             Object::Builtin(_)=>"BUILTIN",
+            Object::Array(_)=>"ARRAY",
             Object::Error(_)=>"ERROR",
             Object::Unknown=>"UNKNOWN",
         }
@@ -41,6 +43,9 @@ impl Object{
             Object::Return(val)=>format!("{}",val.inspect()),
             Object::String(s)=>format!("{s}"),
             Object::Builtin(f)=>format!("builtin function"),
+            Object::Array(a)=>{
+                format!("[{}]",a.iter().map(|x|x.inspect()).collect::<Vec<String>>().join(", "))
+            },
             Object::Error(msg)=>format!("ERROR: {}",msg),
             Object::Unknown=>format!("unknown"),
         }
