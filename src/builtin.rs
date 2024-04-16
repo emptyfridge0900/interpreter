@@ -16,6 +16,7 @@ impl Builtins{
         builtins.functions.insert("last".to_string(), Builtins::last);
         builtins.functions.insert("rest".to_string(), Builtins::rest);
         builtins.functions.insert("push".to_string(), Builtins::push);
+        builtins.functions.insert("puts".to_string(), Builtins::puts);
         builtins
     }
     pub fn get(&self,fn_name:String)->Object{
@@ -95,5 +96,11 @@ impl Builtins{
             },
             _=>Object::Null
         }
+    }
+    fn puts(args:Vec<Object>)->Object{
+        for arg in args{
+            println!("{}", arg.inspect());
+        }
+        Object::Null
     }
 }
