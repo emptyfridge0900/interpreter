@@ -1,4 +1,4 @@
-use std::{any::Any, cell::RefCell, clone, rc::Rc};
+use std::{any::Any, cell::RefCell, clone, collections::HashMap, hash::{Hash, Hasher}, rc::Rc};
 
 use crate::token::{self, Token};
 
@@ -30,7 +30,7 @@ impl Program {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug,Hash)]
 pub enum Statement{
     Let { 
         token: Token, 
@@ -108,8 +108,17 @@ pub enum Expression{
         left:Rc<Expression>,
         index:Rc<Expression>
     },
+    HashLiteral{
+        pairs:HashMap<Expression,Expression>
+    },
     Error
 }
+impl Hash for Expression{
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+    }
+}
+
 impl Expression{
     pub fn string(&self)->String{
         match self{
@@ -136,12 +145,16 @@ impl Expression{
             Expression::Call { token, function, arguments }=>
             format!("{}({})",function.string(),arguments.iter().map(|x|x.string()).collect::<Vec<String>>().join(", ")),
             Expression::Index { left, index }=>format!("({}[{}])",left.string(),index.string()),
+            Expression::HashLiteral { pairs }=>{
+                let string = pairs.iter().map(|x|x.0.string()).collect::<Vec<String>>().join(", ");
+                format!("{{{}}}",string)
+            }
             Expression::Error=>"".to_owned()
         }
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug,Hash)]
 pub struct Identifier{
     pub name:String
 }

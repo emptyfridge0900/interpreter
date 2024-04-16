@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, rc::Rc,hash::Hash};
 
 use crate::object::Object;
 
@@ -7,6 +7,12 @@ use crate::object::Object;
 pub struct Environment{
     pub store:HashMap<String,Object>,
     pub outer:Option<Rc<Environment>>
+}
+impl Hash for Environment{
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.store.hasher();
+        self.outer.hash(state);
+    }
 }
 
 impl Environment{

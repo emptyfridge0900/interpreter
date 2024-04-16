@@ -1,5 +1,5 @@
 use core::panic;
-use std::any::{Any, TypeId};
+use std::{any::{Any, TypeId}, collections::HashMap};
 
 use crate::{
     ast::{Expression, Identifier, Node, Program, Statement}, builtin::Builtins, environment::{new_enclosed_environment, Environment}, object::Object
@@ -22,7 +22,7 @@ fn eval_program(program:&Program,env:&mut Environment)->Object{
     let mut result:Object = Object::Null;
 
     for statement in &program.statements{
-        result = eval(&Node::Statement(statement.clone()),env);
+        result = eval_statement(statement,env);
         // if let Object::Return(value) = result{
         //     return *value;
         // }
@@ -51,8 +51,8 @@ fn eval_expression(expression:&Expression,env:&mut Environment)->Object{
         Expression::Identifier(ident)=>eval_identifier(&ident, env),
         Expression::IntegerLiteral { value }=>Object::Integer(*value),
         Expression::Boolean { value }=>Object::Boolean(*value),
-        Expression::Prefix { token, operator, right }=> eval_prefix_expression(&operator, eval(&Node::Expression(right.clone()),env)),
-        Expression::Infix { token, left, operator, right }=>eval_infix_expression(&operator, eval(&Node::Expression(left.clone()),env), eval(&Node::Expression(right.clone()),env)),
+        Expression::Prefix { token, operator, right }=> eval_prefix_expression(&operator, eval_expression(right,env)),
+        Expression::Infix { token, left, operator, right }=>eval_infix_expression(&operator, eval_expression(left,env), eval_expression(right,env)),
         Expression::If { condition, consequence, alternative }=>eval_if_expression(&expression, env),
         Expression::FunctionLiteral { token, parameters, body }=>{
             Object::Function { parameters: parameters.to_vec(), body: body.as_ref().clone(), env:env.clone() }
@@ -87,8 +87,22 @@ fn eval_expression(expression:&Expression,env:&mut Environment)->Object{
             }
             return eval_index_expression(left,index);
         },
+        Expression::HashLiteral { pairs }=>eval_hash_literal(pairs,env),
         _|Expression::Error=>Object::Null
     }
+}
+fn eval_hash_literal(hash_pairs:&HashMap<Expression,Expression>,env: &mut Environment)->Object{
+    let mut pairs:HashMap<Object,Object> = HashMap::new();
+
+    for (key,value) in hash_pairs{
+        let key = eval_expression(key, env);
+
+        let value = eval_expression(value, env);
+
+        pairs.insert(key, value);
+    }
+
+    Object::Hash(pairs)
 }
 
 fn eval_block_statement(block:&Statement,env:&mut Environment)->Object{
@@ -256,8 +270,17 @@ fn eval_if_expression(ie:&Expression,env:&mut Environment)->Object{
 fn eval_index_expression(left:Object, index:Object)->Object{
     match (left.clone(),index.clone()){
         (Object::Array(array),Object::Integer(int))=>eval_array_index_expression(left,index),
+        (Object::Hash(pairs),_)=>eval_hash_index_expression(pairs,index),
         _=>new_error(format!("index operator not supported {:?}",left))
     }
+}
+
+fn eval_hash_index_expression(pair:HashMap<Object,Object>,index:Object)->Object{
+    let value = pair.get(&index);
+    if value.is_none(){
+        return new_error(format!("unusable as hash key"));
+    }
+    value.unwrap().clone()
 }
 
 fn eval_array_index_expression(array:Object, index:Object)->Object{
@@ -293,10 +316,10 @@ fn is_error(obj:Object)->bool{
 }
 #[cfg(test)]
 mod tests {
-    use core::panic;
-    use std::any::Any;
+    use core::{panic};
+    use std::{any::Any, collections::HashMap};
 
-    use crate::{ast::Node, environment::Environment, lexer::Lexer, object::Object, parser::Parser};
+    use crate::{ast::{Expression, Node}, environment::Environment, lexer::Lexer, object::Object, parser::Parser};
 
     use super::eval;
 
@@ -441,6 +464,10 @@ return 1;
             (
                 r#""Hello" - "World""#,
                 "unknown operator: STRING - STRING"
+            ),
+            (
+                r#"{"name": "Monkey"}[fn(x) { x }];"#,
+                "unusable as hash key"
             )
         ];
         for tt in tests{
@@ -582,6 +609,61 @@ return 1;
                 Object::Integer(i)=>test_integer_object(evaluated, i),
                 _=>test_null_object(evaluated)
             };
+        }
+    }
+    #[test]
+    fn test_hash_literals(){
+        let input = r#"let two = "two";
+        {
+            "one": 10 - 9,
+            two: 1 + 1,
+            "thr" + "ee": 6 / 2,
+            4: 4,
+            true: 5,
+            false: 6
+        }"#;
+        let evaluated = test_eval(input);
+        if let Object::Hash(pairs)=evaluated{
+            let expectd:HashMap<Object,i64> = HashMap::from([
+               (Object::String("one".to_string()),1), 
+               (Object::String("two".to_string()),2), 
+               (Object::String("three".to_string()),3), 
+               (Object::Integer(4),4), 
+               (Object::Boolean(true),5), 
+               (Object::Boolean(false),6), 
+            ]);
+            for (key,exp_value) in expectd{
+                let p = pairs.get(&key);
+                if p.is_none(){
+
+                }
+                let p = p.unwrap();
+                test_integer_object(p.clone(), exp_value);
+
+            }
+        }else{
+            panic!("Eval didn't return Hash. got={:?}",evaluated);
+        }
+    }
+    #[test]
+    fn test_hash_index_expression(){
+        let tests:Vec<(&str,Option<i64>)> = vec![
+            (r#"{"foo": 5}["foo"]"#,Some(5)),
+            (r#"{"foo": 5}["bar"]"#,None),
+            (r#"let key = "foo"; {"foo": 5}[key]"#,Some(5)),
+            (r#"{}["foo"]"#,None),
+            (r#"{5: 5}[5]"#,Some(5)),
+            (r#"{true: 5}[true]"#,Some(5)),
+            (r#"{false: 5}[false]"#,Some(5)),
+        ];
+        for tt in tests{
+            let evaluated = test_eval(tt.0);
+
+            if tt.1.is_some(){
+                test_integer_object(evaluated.clone(), tt.1.unwrap());
+            }else{
+                test_null_object(evaluated);
+            }
         }
     }
 

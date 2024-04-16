@@ -101,6 +101,7 @@ impl Lexer {
             b'<' => tok = Token::LT,
             b'>' => tok = Token::GT,
             b';' => tok = Token::SEMICOLON,
+            b':' => tok = Token::COLON,
             b',' => tok = Token::COMMA,
             b'(' => tok = Token::LPAREN,
             b')' => tok = Token::RPAREN,
@@ -197,6 +198,7 @@ if (5 < 10) {
 "foobar"
 "foo bar"
 [1,2];
+{"foo": "bar"}
 "#;
 
         let tests: Vec<Token> = vec![
@@ -281,6 +283,11 @@ if (5 < 10) {
             Token::INT(2),
             Token::RBRACKET,
             Token::SEMICOLON,
+            Token::LBRACE,
+            Token::STRING("foo".to_string()),
+            Token::COLON,
+            Token::STRING("bar".to_string()),
+            Token::RBRACE,
             Token::EOF,
         ];
         let mut l = Lexer::new(input);

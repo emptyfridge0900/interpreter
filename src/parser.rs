@@ -60,6 +60,7 @@ impl Parser {
         p.register_prefix(Token::IF.token_type(), Parser::parse_if_expression);
         p.register_prefix(Token::FUNCTION.token_type(),Parser::parse_functional_literal);
         p.register_prefix(Token::LBRACKET.token_type(),Parser::parse_array_literal);
+        p.register_prefix(Token::LBRACE.token_type(),Parser::parse_hash_literal);
 
         p.register_infix(Token::PLUS.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::MINUS.token_type(), Parser::parse_infix_expression);
@@ -208,7 +209,7 @@ impl Parser {
         let prefix = self.prefix_parse_fns.get(&self.cur_token.token_type());
         if prefix.is_none() {
             self.no_prefix_parse_fn_error(self.cur_token.clone());
-            return Expression::Error;
+            return Expression::Error;//원본에서는 nil을 return함
         }
         let prefix = prefix.unwrap();
         let mut left_exp = prefix(self);
@@ -393,6 +394,28 @@ impl Parser {
         }
         exp
     }
+    fn parse_hash_literal(&mut self)->Expression{
+        let mut pairs:HashMap<Expression,Expression> = HashMap::new();
+
+        while !self.peek_token_is(Token::RBRACE){
+            self.next_token();
+            let key = self.parse_expression(Precedences::LOWEST);
+            if !self.expect_peek(Token::COLON){
+                return Expression::Error;
+            }
+            self.next_token();
+            let value = self.parse_expression(Precedences::LOWEST);
+            pairs.insert(key, value);
+
+            if !self.peek_token_is(Token::RBRACE) && !self.expect_peek(Token::COMMA){
+                return Expression::Error;
+            }
+        }
+        if !self.expect_peek(Token::RBRACE){
+            return Expression::Error
+        }
+        Expression::HashLiteral { pairs  }
+    }
 
     fn parse_string_literal(&mut self)->Expression{
         Expression::StringLiteral { token: self.cur_token.clone(), value: self.cur_token.token_value() }
@@ -452,14 +475,14 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use core::panic;
-    use std::{any::{Any, TypeId}, rc::Rc};
+    use std::{any::{Any, TypeId}, collections::HashMap, rc::Rc};
 
     use crate::{
         ast::{Expression,Identifier, Program, Statement},
         lexer::Lexer,
     };
 
-    use super::Parser;
+    use super::{ Parser};
 
     #[test]
     fn test_let_statements(){
@@ -1012,7 +1035,96 @@ mod tests {
             }
         }
     }
+    #[test]
+    fn test_parsing_hash_literals_string_keys(){
+        let input = r#"{"one": 1, "two": 2, "three": 3}"#;
+        let l = Lexer::new(input);
+        let mut p = Parser::new(l);
+        let program = p.parse_program();
+        check_parser_errors(&p);
 
+        if let Statement::Expression { token, expression }=&program.statements[0]{
+            if let Expression::HashLiteral { pairs }=expression{
+                if pairs.len() != 3{
+                    panic!("hash.pairs has wrong length. got={}",pairs.len());
+                }
+                let expected:HashMap<&str,i64> = HashMap::from([
+                    ("one",1),
+                    ("two",2),
+                    ("three",3),
+                ]);
+                for (key,value) in pairs{
+                    let v=value;
+                    if let Expression::StringLiteral { token, value } = key{
+                        let expected_value = expected.get(value.as_str());
+                        test_integer_literal(v, *expected_value.unwrap());
+                    }else{
+                        panic!("key is not expression.stringliteral");
+                    }
+                }
+            }else{
+                panic!("exp is not HashLiteral. got={:?}",expression);
+            }
+        }
+    }
+
+    #[test]
+    fn test_parseing_empty_hash_literal(){
+        let input = "{}";
+        let l = Lexer::new(input);
+        let mut p = Parser::new(l);
+        let program = p.parse_program();
+        check_parser_errors(&p);
+
+        if let Statement::Expression { token, expression }=&program.statements[0]{
+            if let Expression::HashLiteral { pairs }=expression{
+                if pairs.len() !=0{
+                    println!("hash.pairs has wrong length. got={}",pairs.len());
+                }
+            }else{
+                panic!("exp is not HashLiteral. got={:?}",expression);
+            }
+
+        }
+
+    }
+    #[test]
+    fn test_parsing_hash_literals_with_expressions(){
+        let input = r#"{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}"#;
+        let l = Lexer::new(input);
+        let mut p = Parser::new(l);
+        let program = p.parse_program();
+        check_parser_errors(&p);
+
+        if let Statement::Expression { token, expression }=&program.statements[0]{
+            if let Expression::HashLiteral { pairs }=expression{
+                if pairs.len() !=3{
+                    println!("hash.pairs has wrong length. got={}",pairs.len());
+                }
+                for (k,v) in pairs{
+                    if let Expression::StringLiteral { token, value } = k{
+                        match value.as_str(){
+                            "one"=>{
+                                test_infix_expression(v, Box::new(0_i64), "+", Box::new(1_i64));
+                            },
+                            "two"=>{
+                                test_infix_expression(v, Box::new(0_i64), "+", Box::new(1_i64));
+                            },
+                            "three"=>{
+                                test_infix_expression(v, Box::new(0_i64), "+", Box::new(1_i64));
+                            },
+                            _=>{
+                                println!("No test function for kye {} found",value);
+                            }
+                        }
+                    }
+                }
+            }else{
+                panic!("exp is not HashLiteral. got={:?}",expression);
+            }
+
+        }
+    }
 
 
     fn test_infix_expression(exp: &Expression, left1: Box<dyn Any>, operator1: &str, right1: Box<dyn Any>) -> bool {
