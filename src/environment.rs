@@ -1,23 +1,49 @@
-use std::{collections::HashMap, rc::Rc,hash::Hash};
-
+use std::{ cell::{RefCell, RefMut}, collections::HashMap, fmt::Debug, hash::Hash, rc::Rc};
 use crate::object::Object;
 
 
-#[derive(PartialEq,Eq,Clone,Debug)]
+#[derive(Clone,Debug)]
 pub struct Environment{
-    pub store:HashMap<String,Object>,
-    pub outer:Option<Rc<Environment>>
+    env: Rc<RefCell<EnvData>>,
 }
-impl Hash for Environment{
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.store.hasher();
-        self.outer.hash(state);
+
+impl PartialEq for Environment {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.env, &other.env)
     }
 }
+
+impl Eq for Environment {}
+
+
 
 impl Environment{
     pub fn new()->Environment{
         Environment{
+            env:Rc::new(RefCell::new(EnvData::new()))
+        }
+    }
+    pub fn get(&self, name: &String) -> Option<Object> {
+        self.env.borrow().get(name.to_string())
+    }
+
+    pub fn set(&mut self,name:String,val:Object){
+        self.env.borrow_mut().set(name, val);
+    }
+}
+
+
+
+#[derive(Clone,Debug)]
+pub struct EnvData{
+    pub store:HashMap<String,Object>,
+    pub outer:Option<Environment>
+}
+
+
+impl EnvData{
+    pub fn new()->EnvData{
+        EnvData{
             store:HashMap::new(),
             outer:None
         }
@@ -28,7 +54,7 @@ impl Environment{
             Some(v)=>Some(v.clone()),
             None=>{
                 if self.outer.is_some(){
-                    let outer_val =self.outer.clone().unwrap().get(name);
+                    let outer_val =self.outer.clone().unwrap().get(&name);
                     return outer_val;
                 }else{
                     return None;
@@ -44,15 +70,16 @@ impl Environment{
 
 
 pub fn new_enclosed_environment(outer:Environment)->Environment{
-    let mut env = new_environment();
-    env.outer.replace(outer.into());
+    let mut env = new_environment(outer);
     return env;
 }
 
-fn new_environment()->Environment{
+fn new_environment(outer:Environment)->Environment{
     let s:HashMap<String, Object> = HashMap::new();
-    return Environment{
-        store:s,
-        outer:None
+    Environment{
+        env:Rc::new(RefCell::new(EnvData{
+            store:s,
+            outer:Some(outer)
+        }))
     }
 }

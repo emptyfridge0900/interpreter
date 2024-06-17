@@ -210,7 +210,7 @@ fn eval_string_infix_expression(operator:String,left:Object,right:Object)->Objec
 
 }
 fn eval_identifier(node:&Identifier,env:&Environment)->Object{
-    let val = env.get(node.name.clone());
+    let val = env.get(&node.name.clone());
     if val.is_some(){
         return val.unwrap();
     }
