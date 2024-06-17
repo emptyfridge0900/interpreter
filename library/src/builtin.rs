@@ -98,9 +98,10 @@ impl Builtins{
         }
     }
     fn puts(args:Vec<Object>)->Object{
-        for arg in args{
-            println!("{}", arg.inspect());
+        if args.len()==0{
+            return Object::Null
         }
-        Object::Null
+        let ret=args.iter().map(|x|x.inspect()).collect::<Vec<String>>().join(" ");
+        Object::String(ret)
     }
 }
