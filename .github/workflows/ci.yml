@@ -1,6 +1,9 @@
 
 name: Build and deploy GH Pages
-on: [push]
+on:
+  push:
+    branches:
+      - v2
 jobs:
   build:
     runs-on: ubuntu-latest
