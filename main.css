@@ -1,0 +1,42 @@
+body {
+    background-color: #111216;
+}
+
+#main {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
+}
+
+
+textarea {
+    margin: 10px;
+    padding: 10px;
+}
+button {
+    width: 100px;
+}
+
+#user-input{
+    width: 50%;
+}
+#output{
+    width: 50%;
+}
+
+#content-wrap{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+#content-wrap:after {
+      content: "";
+      display: block;
+      clear: both;
+}
+
+
+
