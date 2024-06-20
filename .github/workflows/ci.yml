@@ -1,0 +1,50 @@
+
+name: Build and deploy GH Pages
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          target: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install dioxus-cli
+        run: CARGO_TARGET_DIR=`pwd`/target cargo install dioxus-cli
+
+      - name: Build
+        run: cd web && dx build --release 
+      
+      - name: Save wasm dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: interpreter-web-dist
+          path: web/dist
+          if-no-files-found: error
+  
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download wasm dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: interpreter-web-dist
+          path: dist-for-deploy
+        
+      - name: Deploy
+        uses: crazy-max/ghaction-github-pages@v4
+        with:
+          repo: emptyfridge0900/interpreter
+          target_branch: gh-pages
+          build_dir: dist-for-deploy
+          keep_history: false
+          jekyll: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.token}}
