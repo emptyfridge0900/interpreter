@@ -23,6 +23,7 @@ pub enum Token {
     SLASH,
     LT,
     GT,
+    MOD,
 
     //Comparison operators
     EQ,
@@ -75,6 +76,7 @@ impl Token{
             Token::MINUS=>Precedences::SUM,
             Token::SLASH=>Precedences::PRODUCT,
             Token::ASTERISK=>Precedences::PRODUCT,
+            Token::MOD=>Precedences::PRODUCT,
             Token::LPAREN=>Precedences::CALL,
             Token::LBRACKET=>Precedences::INDEX,
             _=>Precedences::LOWEST
@@ -97,6 +99,7 @@ impl fmt::Display for Token{
             Token::SLASH=>write!(f,"/"),
             Token::LT=>write!(f,"<"),
             Token::GT=>write!(f,">"),
+            Token::MOD=>write!(f,"%"),
             Token::EQ=>write!(f,"=="),
             Token::NOT_EQ=>write!(f,"!="),
             Token::COMMA=>write!(f,","),

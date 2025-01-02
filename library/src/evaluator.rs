@@ -242,6 +242,7 @@ fn eval_integer_infix_expression(operator:&str,left:i64,right:i64)->Object{
         "-"=>Object::Integer(left-right),
         "*"=>Object::Integer(left*right),
         "/"=>Object::Integer(left/right),
+        "%"=>Object::Integer(left%right),
         "<"=>native_boolean_to_boolean_object(left<right),
         ">"=>native_boolean_to_boolean_object(left>right),
         "=="=>native_boolean_to_boolean_object(left==right),
@@ -326,6 +327,7 @@ mod tests {
     #[test]
     fn test_eval_integer_expression() {
         let tests: Vec<(&str, i64)> = vec![
+            ("5 % 2",1),
             ("5", 5), 
             ("10", 10),
             ("-5",-5),

@@ -98,6 +98,7 @@ impl Lexer {
             }
             b'*' => tok = Token::ASTERISK,
             b'/' => tok = Token::SLASH,
+            b'%' => tok = Token::MOD,
             b'<' => tok = Token::LT,
             b'>' => tok = Token::GT,
             b';' => tok = Token::SEMICOLON,

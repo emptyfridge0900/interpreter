@@ -65,6 +65,7 @@ impl Parser {
         p.register_infix(Token::PLUS.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::MINUS.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::SLASH.token_type(), Parser::parse_infix_expression);
+        p.register_infix(Token::MOD.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::ASTERISK.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::EQ.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::NOT_EQ.token_type(), Parser::parse_infix_expression);
