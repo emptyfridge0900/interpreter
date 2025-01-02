@@ -71,6 +71,8 @@ impl Parser {
         p.register_infix(Token::NOT_EQ.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::LT.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::GT.token_type(), Parser::parse_infix_expression);
+        p.register_infix(Token::LTEQ.token_type(), Parser::parse_infix_expression);
+        p.register_infix(Token::GTEQ.token_type(), Parser::parse_infix_expression);
         p.register_infix(Token::LPAREN.token_type(), Parser::parse_call_expression);
         p.register_infix(Token::LBRACKET.token_type(), Parser::parse_index_expression);
 

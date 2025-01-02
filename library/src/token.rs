@@ -28,6 +28,8 @@ pub enum Token {
     //Comparison operators
     EQ,
     NOT_EQ,
+    LTEQ,
+    GTEQ,
 
     // Delimiters
     COMMA,
@@ -72,6 +74,8 @@ impl Token{
             Token::NOT_EQ=>Precedences::EQUALS,
             Token::LT=>Precedences::LESSGREATER,
             Token::GT=>Precedences::LESSGREATER,
+            Token::LTEQ=>Precedences::LESSGREATER,
+            Token::GTEQ=>Precedences::LESSGREATER,
             Token::PLUS=>Precedences::SUM,
             Token::MINUS=>Precedences::SUM,
             Token::SLASH=>Precedences::PRODUCT,
@@ -99,6 +103,8 @@ impl fmt::Display for Token{
             Token::SLASH=>write!(f,"/"),
             Token::LT=>write!(f,"<"),
             Token::GT=>write!(f,">"),
+            Token::LTEQ=>write!(f,"<="),
+            Token::GTEQ=>write!(f,">="),
             Token::MOD=>write!(f,"%"),
             Token::EQ=>write!(f,"=="),
             Token::NOT_EQ=>write!(f,"!="),

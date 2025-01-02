@@ -247,6 +247,8 @@ fn eval_integer_infix_expression(operator:&str,left:i64,right:i64)->Object{
         ">"=>native_boolean_to_boolean_object(left>right),
         "=="=>native_boolean_to_boolean_object(left==right),
         "!="=>native_boolean_to_boolean_object(left!=right),
+        "<="=>native_boolean_to_boolean_object(left<=right),
+        ">="=>native_boolean_to_boolean_object(left>=right),
         _=>new_error(format!("unknown operator: {} {} {}",left, operator, right))
     }
 }

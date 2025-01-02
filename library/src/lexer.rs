@@ -99,8 +99,26 @@ impl Lexer {
             b'*' => tok = Token::ASTERISK,
             b'/' => tok = Token::SLASH,
             b'%' => tok = Token::MOD,
-            b'<' => tok = Token::LT,
-            b'>' => tok = Token::GT,
+            b'<' => tok = {
+                if self.peek_char() == b'='{
+                    let ch = self.ch;
+                    self.read_char();
+                    from_utf8(&[ch, self.ch]).unwrap().to_string();
+                    Token::LTEQ
+                }else{
+                    Token::LT
+                }
+            },
+            b'>' => tok = {
+                if self.peek_char() == b'='{
+                    let ch = self.ch;
+                    self.read_char();
+                    from_utf8(&[ch, self.ch]).unwrap().to_string();
+                    Token::GTEQ
+                }else{
+                    Token::GT
+                }
+            },
             b';' => tok = Token::SEMICOLON,
             b':' => tok = Token::COLON,
             b',' => tok = Token::COMMA,
