@@ -11,6 +11,7 @@ use std::thread::Scope;
 use dioxus::prelude::*;
 use tracing::Level;
 
+static CSS: Asset = asset!("/assets/main.css");
 fn main() {
     // Init logger
     dioxus_logger::init(Level::INFO).expect("failed to init logger");
@@ -21,42 +22,64 @@ fn App() -> Element {
     // Build cool things ✌️
 
     rsx! {
-        link { rel: "stylesheet", href: "main.css" }
+        document::Stylesheet { href: CSS }
         Hello{
 
         }
     }
 }
 
+pub fn test (input:&str) {
+
+
+}
+static helloworld:&str = "puts(\"hello world\")";
+
+static factorial:&str = r#"let factorial = fn(n) {
+  if (n <= 1) {
+    return 1;
+  }
+  return n * factorial(n - 1);
+}
+puts(factorial(5))"#;
 pub fn Hello() -> Element {
     let mut user_input = use_signal::<String>(|| "puts(\"hello world\")".to_string());
     let mut result = use_signal(|| "".to_string());
+    
     rsx! {
-        div{
-            id:"content-wrap",
-            textarea{
-               id:"user-input",
-               cols:70,
-               rows:20,
-               value:"{user_input}",
-               oninput: move |event| user_input.set(event.value())
-            }
-            button{
-                onclick: move |_| {
-                    let val = user_input.read().clone();
-                    let e = evaluate(val);
-                    *result.write() = e;
-                },
-                "Run"
-            }
-            textarea{
-                id:"output",
-                cols:70,
-                rows:20,
-                value:"{result}"
-            }
-        }
+        
+            
+            div{
+                class:"input-section",
+                div {  
+                    class:"tabs",
+                    button { onclick: move|_|{ user_input.set(helloworld.to_string()) }, "Hello World" },
 
+                    button { onclick: move|_|{ user_input.set(factorial.to_string()) }, "Factorial" },
+                },
+                textarea{
+                    id:"codeInput",
+                    value:"{user_input}",
+                    oninput: move |event| user_input.set(event.value())
+                },
+                button{
+                    onclick: move |_| {
+                        let val = user_input.read().clone();
+                        let e = evaluate(val);
+                        *result.write() = e;
+                    },
+                    "Run"
+                }
+            },
+            div{
+                class:"output-section",
+                textarea{
+                    id:"output",
+                    class:"output",
+                    value:"{result}"
+                }
+            }
+        
     }
 }
 
