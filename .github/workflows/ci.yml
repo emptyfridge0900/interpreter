@@ -27,7 +27,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: interpreter-web-dist
-          path: web/dist
+          path: target\dx\web\release\web\public
           if-no-files-found: error
   
   deploy:
