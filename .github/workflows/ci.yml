@@ -38,14 +38,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: interpreter-web-dist
-          path: dist-for-deploy
+          path: public
         
       - name: Deploy
         uses: crazy-max/ghaction-github-pages@v4
         with:
           repo: emptyfridge0900/interpreter
           target_branch: gh-pages
-          build_dir: dist-for-deploy
+          build_dir: public
           keep_history: false
           jekyll: false
         env:
