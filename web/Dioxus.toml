@@ -17,7 +17,7 @@ asset_dir = "asset"
 
 # HTML title tag content
 title = "web"
-base_path = "https://emptyfridge0900.github.io/interpreter"
+#base_path = "https://emptyfridge0900.github.io/interpreter"
 
 [web.watcher]
 
