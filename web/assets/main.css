@@ -1,66 +1,70 @@
-
-
 body {
     margin: 0;
     font-family: Arial, sans-serif;
     display: flex;
     height: 100vh;
+    overflow: hidden;
+    /* Prevent scrolling */
 }
 
 #main {
     display: flex;
-    flex-direction: row;
     flex: 1;
 }
 
 .input-section,
 .output-section {
     flex: 1;
-    padding: 20px;
+    display: flex;
+    flex-direction: column;
     box-sizing: border-box;
 }
 
 .input-section {
     background-color: #f4f4f4;
     border-right: 2px solid #ddd;
+    padding: 10px;
 }
 
 .output-section {
     background-color: #ffffff;
-}
-  .tabs {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .tabs button {
-      flex: 1;
-      padding: 10px;
-      font-size: 14px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .tabs button:hover {
-      background-color: #0056b3;
-    }
-textarea {
-    width: 100%;
-    height: calc(100% - 50px);
     padding: 10px;
+}
+
+.tabs {
+    display: flex;
+    gap: 5px;
+}
+
+.tabs button {
+    flex: 1;
+    padding: 5px;
+    font-size: 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.tabs button:hover {
+    background-color: #0056b3;
+}
+
+textarea {
+    flex: 1;
     font-family: monospace;
-    font-size: 16px;
+    font-size: 14px;
     border: 1px solid #ccc;
+    padding: 5px;
     resize: none;
 }
 
 button {
     width: 100%;
-    padding: 10px;
-    font-size: 16px;
-    margin-top: 10px;
+    padding: 5px;
+    font-size: 14px;
+    margin-top: 5px;
     background-color: #007bff;
     color: white;
     border: none;
@@ -72,12 +76,12 @@ button:hover {
 }
 
 .output {
+    flex: 1;
     white-space: pre-wrap;
     font-family: monospace;
-    font-size: 16px;
+    font-size: 14px;
     border: 1px solid #ccc;
-    padding: 10px;
-    height: calc(100% - 50px);
+    padding: 5px;
     overflow-y: auto;
 }
 
