@@ -23,7 +23,7 @@ fn App() -> Element {
 
     rsx! {
 
-        link { rel: "stylesheet", href: "main.css" }
+        document::Link { rel: "stylesheet", href: CSS }
         //document::Stylesheet { href: CSS }
         Hello{
 
