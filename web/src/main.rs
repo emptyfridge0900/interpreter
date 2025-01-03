@@ -22,7 +22,9 @@ fn App() -> Element {
     // Build cool things ✌️
 
     rsx! {
-        document::Stylesheet { href: CSS }
+
+        link { rel: "stylesheet", href: "main.css" }
+        //document::Stylesheet { href: CSS }
         Hello{
 
         }
