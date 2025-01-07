@@ -1,6 +1,6 @@
-use std::io::{stdin, stdout, Write};
+use std::{cell::RefCell, io::{stdin, stdout, Write}, rc::Rc};
 
-use crate::{ ast::Node, environment::Environment, evaluator::eval, lexer::Lexer, object::Object, parser::Parser};
+use crate::{ ast::Node, environment::Environment, evaluator::Evaluator, lexer::Lexer, object::Object, parser::Parser};
 
 pub fn start(){
     let mut env = Environment::new();
@@ -18,7 +18,11 @@ pub fn start(){
             continue;
         }
         println!("{}",program.string());
-        let evaludated = eval(&Node::Program(program),&mut env);
+        let func = Rc::new(RefCell::new(|str:&str|{
+            println!("{str}")
+        }));
+        let evaluator = Evaluator::new(func);
+        let evaludated = evaluator.eval(&Node::Program(program),&mut env);
         if evaludated != Object::Null{
            println!("{}",evaludated.inspect()); 
         }

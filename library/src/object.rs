@@ -11,7 +11,7 @@ pub enum Object{
     Return(Box<Object>),
     Function{parameters:Vec<Identifier>,body:Statement,env:Environment},
     String(String),
-    Builtin(fn(args:Vec<Object>) -> Object),
+    Builtin(String),
     Error(String),
     Array(Box<[Object]>),
     Hash(HashMap<Object,Object>),

@@ -1,34 +1,44 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{evaluator::new_error, object::Object};
 
 
-pub struct Builtins{
-    functions:HashMap<String,fn(args:Vec<Object>) -> Object>
+pub struct Builtins<'a>{
+    output:Rc<RefCell<dyn FnMut(&str) + 'a>>
 }
-impl Builtins{
-    pub fn new()->Builtins{
-        let mut builtins =Builtins{
-            functions:HashMap::new()
+impl<'a> Builtins<'a>{
+    pub fn new(output:Rc<RefCell<dyn FnMut(&str) + 'a>>)->Builtins<'a>{
+        let builtins =Builtins{
+            output
         };
-        builtins.functions.insert("len".to_string(), Builtins::len);
-        builtins.functions.insert("first".to_string(), Builtins::first);
-        builtins.functions.insert("last".to_string(), Builtins::last);
-        builtins.functions.insert("rest".to_string(), Builtins::rest);
-        builtins.functions.insert("push".to_string(), Builtins::push);
-        builtins.functions.insert("puts".to_string(), Builtins::puts);
+
         builtins
     }
-    pub fn get(&self,fn_name:String)->Object{
-        let function = self.functions.get(&fn_name);
-        if function.is_none(){
-            println!("not a function");
-            return Object::Null;
+    pub fn get(&self,fn_name:&str)->Object{
+        match fn_name{
+            "len"=>Object::Builtin("len".to_string()),
+            "first"=>Object::Builtin("first".to_string()),
+            "last"=>Object::Builtin("last".to_string()),
+            "rest"=>Object::Builtin("rest".to_string()),
+            "push"=>Object::Builtin("push".to_string()),
+            "puts"=>Object::Builtin("puts".to_string()),
+            _=>Object::Null
         }
-        Object::Builtin(*function.unwrap())
+
+    }
+    pub fn call(&self, name:&str, args:Vec<Object>)->Object{
+        match name{
+            "len" => self.len(args),
+            "first" => self.first(args),
+            "last" => self.last(args),
+            "rest" => self.rest(args),
+            "push" => self.push(args),
+            "puts" => self.puts(args),
+            _ => Object::Null
+        }
     }
 
-    fn len(args:Vec<Object>)->Object{
+    fn len(&self,args:Vec<Object>)->Object{
         if args.len() !=1{
             return new_error(format!("wrong number of arguments. got={}, want=1",args.len()));
         }
@@ -38,7 +48,7 @@ impl Builtins{
             _=>new_error(format!("argument to 'len' not supported, got={:?}",args[0]))
         }
     }
-    fn first(args:Vec<Object>)->Object{
+    fn first(&self, args:Vec<Object>)->Object{
         if args.len() !=1{
             return new_error(format!("wrong number of arguments. got={}, want=1",args.len()));
         }
@@ -50,7 +60,7 @@ impl Builtins{
             _=>Object::Null
         }
     }
-    fn last(args:Vec<Object>)->Object{
+    fn last(&self, args:Vec<Object>)->Object{
         if args.len() !=1{
             return new_error(format!("wrong number of arguments. got={}, want=1",args.len()));
         }
@@ -62,7 +72,7 @@ impl Builtins{
             _=>Object::Null
         }
     }
-    fn rest(args:Vec<Object>)->Object{
+    fn rest(&self, args:Vec<Object>)->Object{
         if args.len() !=1{
             return new_error(format!("wrong number of arguments. got={}, want=1",args.len()));
         }
@@ -80,7 +90,7 @@ impl Builtins{
             _=>Object::Null
         }
     }
-    fn push(args:Vec<Object>)->Object{
+    fn push(&self, args:Vec<Object>)->Object{
         if args.len() !=2{
             return new_error(format!("wrong number of arguments. got={}, want=1",args.len()));
         }
@@ -97,11 +107,13 @@ impl Builtins{
             _=>Object::Null
         }
     }
-    fn puts(args:Vec<Object>)->Object{
+    pub fn puts(&self, args:Vec<Object>)->Object{
         if args.len()==0{
             return Object::Null
         }
         let ret=args.iter().map(|x|x.inspect()).collect::<Vec<String>>().join(" ");
+
+        self.output.borrow_mut()(&ret);
         Object::String(ret)
     }
 }

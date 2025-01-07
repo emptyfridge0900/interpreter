@@ -1,113 +1,93 @@
 body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-    /* Prevent scrolling */
+  margin: 0;
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden; /* Prevent overall page scrolling */
 }
-
 #main {
-    display: flex;
-    flex: 1;
+  display: flex;
+  flex-direction: row;
+  height: 100%;
 }
-
-.input-section,
-.output-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-}
-
 .input-section {
-    background-color: #f4f4f4;
-    border-right: 2px solid #ddd;
-    padding: 10px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #f4f4f4;
+  border-right: 2px solid #ddd;
+  padding: 10px;
 }
-
-.output-section {
-    background-color: #ffffff;
-    padding: 10px;
-}
-
 .tabs {
-    display: flex;
-    gap: 5px;
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap; /* Tabs wrap on smaller screens */
 }
-
 .tabs button {
-    flex: 1;
-    padding: 5px;
-    font-size: 12px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    cursor: pointer;
-    border-radius: 4px;
+  flex: 1;
+  padding: 8px;
+  font-size: 14px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
 }
-
 .tabs button:hover {
-    background-color: #0056b3;
+  background-color: #0056b3;
 }
-
 textarea {
-    flex: 1;
-    font-family: monospace;
-    font-size: 14px;
-    border: 1px solid #ccc;
-    padding: 5px;
-    resize: none;
+  flex: 1;
+  font-family: monospace;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  padding: 5px;
+  resize: none;
+}
+button.run-button {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  margin-top: 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+button.run-button:hover {
+  background-color: #0056b3;
+}
+.output-section {
+  flex: 1;
+  background-color: #ffffff;
+  overflow-y: auto; /* Scrollable output section */
+  padding: 10px;
+}
+.output-line {
+  font-family: monospace;
+  font-size: 14px;
+  margin: 5px 0;
+  padding: 5px;
+  border-bottom: 1px solid #ddd;
+  word-wrap: break-word; /* Handle long output lines */
+}
+.error {
+  color: red;
+}
+.success {
+  color: green;
 }
 
-button {
-    width: 100%;
-    padding: 5px;
-    font-size: 14px;
-    margin-top: 5px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    cursor: pointer;
-}
-
-button:hover {
-    background-color: #0056b3;
-}
-
-.output {
-    flex: 1;
-    white-space: pre-wrap;
-    font-family: monospace;
-    font-size: 14px;
-    border: 1px solid #ccc;
-    padding: 5px;
-    overflow-y: auto;
-}
-
-/* Mobile-friendly styles */
+/* Responsive Design */
 @media (max-width: 768px) {
-    #main {
-        flex-direction: column;
-    }
-
-    .input-section {
-        border-right: none;
-        border-bottom: 2px solid #ddd;
-    }
-
-    textarea {
-        height: calc(100% - 60px);
-        /* Adjust for more compact buttons on mobile */
-    }
-
-    button {
-        font-size: 14px;
-        padding: 8px;
-    }
-
-    .output {
-        height: calc(100% - 60px);
-        /* Adjust for mobile */
-    }
+  #main {
+    flex-direction: column;
+  }
+  .input-section {
+    height: 50%; /* Input section takes 50% height */
+  }
+  .output-section {
+    height: 50%; /* Output section takes 50% height */
+  }
 }
